@@ -7,7 +7,38 @@ package app.apexled.pattern
 sealed interface Pattern {
 
     /**
-     * P1 - full spectrum, cold to hot: t=0 is blue, t=1 is red, passing through
+     * Mode 1 - spectrum by PWM: blue, green, yellow, orange, red at 0, 24, 48, 72 and 96 %,
+     * blended linearly in RGB between neighbours. From 96 % up it stays on the last colour.
+     */
+    data object PwmSpectrum : Pattern
+
+    /** Mode 2 - same five stops as [PwmSpectrum], each with a colour chosen by the user. */
+    data class CustomSpectrum(val colors: List<Rgb> = SPECTRUM_DEFAULT) : Pattern {
+        init {
+            require(colors.size == SPECTRUM_STOPS.size) { "CustomSpectrum needs ${SPECTRUM_STOPS.size} colours" }
+        }
+    }
+
+    /**
+     * Mode 3 - alternates between two colours, faster as the input (speed by default) grows.
+     * Frequency = [maxHz] x position. At position zero it stays on [first].
+     * [maxHz] is capped at [MAX_HZ_LIMIT]: fast alternation can cause discomfort or trigger
+     * photosensitive epilepsy.
+     */
+    data class SpeedBlink(val first: Rgb = Rgb.BLUE, val second: Rgb = Rgb.WHITE, val maxHz: Double = DEFAULT_MAX_HZ) : Pattern {
+        init {
+            require(maxHz in MIN_HZ_LIMIT..MAX_HZ_LIMIT) { "maxHz must be $MIN_HZ_LIMIT..$MAX_HZ_LIMIT" }
+        }
+
+        companion object {
+            const val DEFAULT_MAX_HZ = 5.0
+            const val MIN_HZ_LIMIT = 0.5
+            const val MAX_HZ_LIMIT = 10.0
+        }
+    }
+
+    /**
+     * P1 (earlier draft) - full spectrum, cold to hot: t=0 is blue, t=1 is red, passing through
      * cyan, green and yellow. Hue = 240 * (1 - t) degrees.
      */
     data object ContinuousGradient : Pattern
@@ -63,6 +94,12 @@ sealed interface Pattern {
         }
     }
 }
+
+/** Positions (0..1) of the five stops of modes 1 and 2: 0, 24, 48, 72 and 96 %. */
+val SPECTRUM_STOPS = listOf(0.0, 0.24, 0.48, 0.72, 0.96)
+
+/** Mode 1 colours: blue, green, yellow, orange, red. */
+val SPECTRUM_DEFAULT = listOf(Rgb.BLUE, Rgb.GREEN, Rgb.YELLOW, Rgb(255, 128, 0), Rgb.RED)
 
 /** What a [Pattern.Pulse] shows when the input is outside every item's range. */
 sealed interface IdleLight {

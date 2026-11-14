@@ -10,14 +10,14 @@ enum class CriticalCause { APP_ALARM, PWM, SPEED, TEMPERATURE, CURRENT, VOLTAGE 
  * nothing in a pattern can switch the critical indicator off.
  *
  * An alarm raised by the host app is always critical and has no setting. The thresholds add
- * further causes; null means "not used". Which of them should be on by default is an open
- * question (docs/questoes.md, Q3), so none is.
+ * further causes; null means "not used". PWM at or above 96 % is critical by default, as specified;
+ * the other thresholds start unused.
  *
  * @param holdMs how long the indicator stays on after the last cause clears, so a value
  *   hovering around a threshold does not make the light flicker. It never delays the onset.
  */
 data class SafetyConfig(
-    val pwmPercent: Double? = null,
+    val pwmPercent: Double? = DEFAULT_PWM_PERCENT,
     val speedKmh: Double? = null,
     val temperatureC: Double? = null,
     val currentA: Double? = null,
@@ -51,6 +51,9 @@ data class SafetyConfig(
 
     companion object {
         const val MAX_HOLD_MS = 10_000L
+
+        /** The wheel's critical PWM, as specified. */
+        const val DEFAULT_PWM_PERCENT = 96.0
     }
 }
 

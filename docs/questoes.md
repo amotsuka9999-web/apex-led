@@ -4,7 +4,37 @@ Nenhuma destas perguntas foi respondida por suposição. Para cada uma está ind
 ela bloqueia e como o código se comporta enquanto não há resposta (sempre um valor
 provisório, configurável e fácil de trocar).
 
-Estado em 2026-11-14: todas **abertas**.
+## Situação após a especificação revisada (2026-11-14)
+
+A especificação revisada respondeu parte das perguntas. O que vale agora:
+
+| Pergunta | Situação |
+|---|---|
+| Q1 modelo da placa | **Respondida: SP621E.** Codec `sp621e` adicionado e posto como padrão. Versão do Balanx analisada continua desconhecida. |
+| Q2 roda e firmware | **Aberta** (dúvida 1 da especificação): "Nosfet" pode ser a roda ou a linha da placa. |
+| Q3 o que é crítico | **Respondida: PWM ≥ 96 %.** É o padrão de `SafetyConfig`. Os outros limiares continuam disponíveis e desligados. |
+| Q4 modo de transição | **Substituída** pelos Modos 1, 2 e 3. Os padrões do rascunho anterior (gradiente contínuo, três cores, pulso, sequência) continuam no motor, fora da tela. Decidir se devem ser removidos. |
+| Q5 iOS | **Respondida: só Android.** |
+| Q6 URL do WheelLog | **Aberta** (dúvida 4). |
+| Q7 Balanx / BanlanX / Nosfet | **Aberta.** A SP621E é uma controladora da linha SP LED usada com o app BanlanX, o que reforça a hipótese, mas a relação com a Nosfet não foi confirmada. |
+| Q8 vermelho crítico x vermelho do padrão | **Encaminhada:** o alerta agora é, por padrão, vermelho piscando a 2 Hz (entre o limite de brilho e 25 % dele), distinto do vermelho fixo do Modo 1; a opção "vermelho fixo" continua configurável. Falta a confirmação (dúvida 3). |
+| Q13 limites | O Modo 3 segue a decisão de projeto: limite padrão de 5 Hz, configurável de 0,5 a 10 Hz, com aviso na tela. |
+
+Dúvidas novas desta rodada:
+
+- **Q16. Primeiro ponto do Modo 1 é azul?** Implementado como azul (dúvida 2 da especificação).
+- **Q17. SP621E é uma controladora de fita endereçável (SPI), não PWM.** Em fita COB endereçável o
+  comando de cor sólida pinta a fita inteira, que é o que os padrões usam. Se a fita for COB RGB
+  comum (4 fios), o modelo da placa precisa ser conferido.
+- **Q18. Modo 3 e mudança de velocidade.** A frequência é proporcional à entrada e a fase é
+  calculada do relógio; quando a velocidade muda, a alternância pode dar um salto de fase
+  (uma troca fora de ritmo). Corrigir exige acumular fase no controlador. Avaliar em campo.
+- **Q19. Interpolação.** Modos 1 e 2 interpolam em RGB linear por canal (decisão da Fase 3).
+  O trecho azul→verde passa por um azul-esverdeado mais escuro; se incomodar, trocar para HSV.
+- **Q20. O limiar de 96 % pode ser desligado na tela de alerta** (não na de padrões). Confirmar se
+  deve ser fixo.
+
+O texto abaixo é o registro original, anterior à especificação revisada.
 
 ## Perguntas do pedido original
 

@@ -104,6 +104,7 @@ object PatternEngine {
                     }
                     else -> item.color
                 }
+                is Pattern.SpeedBlink -> if (index % 2 == 0) pattern.first else pattern.second
                 else -> evaluate(pattern, t, 0L).first
             }
         }
@@ -111,6 +112,15 @@ object PatternEngine {
 
     /** Pattern colour and unlimited intensity (0..1) at position [t] and time [timeMs]. */
     internal fun evaluate(pattern: Pattern, t: Double, timeMs: Long): Pair<Rgb, Double> = when (pattern) {
+        Pattern.PwmSpectrum -> spectrumColor(SPECTRUM_DEFAULT, t) to 1.0
+
+        is Pattern.CustomSpectrum -> spectrumColor(pattern.colors, t) to 1.0
+
+        is Pattern.SpeedBlink -> {
+            val hz = pattern.maxHz * t
+            (if (hz <= 0.0 || phase(timeMs, hz) < 0.5) pattern.first else pattern.second) to 1.0
+        }
+
         Pattern.ContinuousGradient -> Rgb.fromHue(COLD_HUE * (1.0 - t)) to 1.0
 
         is Pattern.ThreeColorGradient ->
@@ -129,6 +139,14 @@ object PatternEngine {
             }
             else -> item.color to pulseIntensity(item, timeMs)
         }
+    }
+
+    private fun spectrumColor(colors: List<Rgb>, t: Double): Rgb {
+        val last = SPECTRUM_STOPS.lastIndex
+        if (t >= SPECTRUM_STOPS[last]) return colors[last]
+        val index = SPECTRUM_STOPS.indexOfLast { it <= t }.coerceIn(0, last - 1)
+        val span = SPECTRUM_STOPS[index + 1] - SPECTRUM_STOPS[index]
+        return Rgb.lerp(colors[index], colors[index + 1], (t - SPECTRUM_STOPS[index]) / span)
     }
 
     private fun activeItem(pattern: Pattern.Pulse, t: Double): PulseItem? {

@@ -62,6 +62,15 @@ versão de Android do celular, versão deste app.
 - [ ] Trocar a entrada (velocidade/PWM) em movimento.
 - [ ] A suavização padrão (250 ms) é agradável? Anotar o valor preferido.
 
+### B1b. Modos da especificação revisada
+- [ ] Modo 1: conferir as cinco cores em 0, 24, 48, 72 e 96 % (pela bancada ou em movimento).
+- [ ] Modo 2: cinco cores escolhidas aparecem nos mesmos pontos.
+- [ ] Trocar de modo em movimento: troca imediata, sem piscada estranha.
+- [ ] Modo 3 parado: cor fixa. Acelerando: alternância cada vez mais rápida.
+- [ ] **(S)** Modo 3 na velocidade máxima: a alternância não passa do limite configurado (filmar e contar); a placa acompanha 5 Hz sem atrasar; não causa desconforto a quem pilota nem a quem está por perto. Reduzir o limite se causar.
+- [ ] Modo 3 com variação brusca de velocidade: há troca fora de ritmo perceptível? (Q18)
+- [ ] **(S)** A 96 % de PWM o vermelho piscante é claramente distinto do vermelho fixo do Modo 1 logo abaixo.
+
 ### B2. Alerta crítico em movimento **(S)**
 - [ ] Com um limiar baixo e seguro (por exemplo, velocidade de 15 km/h), cruzar o limiar: vermelho imediato em todas as placas.
 - [ ] O vermelho é distinguível da ponta quente do P1? Se não, testar o estilo piscante (Q8).

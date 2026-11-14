@@ -34,6 +34,9 @@ class SettingsPersistenceTest {
 
     private val everyPattern = listOf(
         Pattern.ContinuousGradient,
+        Pattern.PwmSpectrum,
+        Pattern.CustomSpectrum(listOf(Rgb(1, 1, 1), Rgb(2, 2, 2), Rgb(3, 3, 3), Rgb(4, 4, 4), Rgb(5, 5, 5))),
+        Pattern.SpeedBlink(Rgb.GREEN, Rgb(9, 9, 9), 3.5),
         Pattern.ThreeColorGradient(Rgb(1, 2, 3), Rgb(40, 50, 60), Rgb(250, 251, 252), midpoint = 0.3),
         Pattern.Pulse(
             items = listOf(
@@ -81,7 +84,7 @@ class SettingsPersistenceTest {
 
     @Test
     fun `settings persist between sessions through the file store`() {
-        val settings = customised(everyPattern[2])
+        val settings = customised(everyPattern[5])
         FileSettingsStore(file).save(settings)
 
         // A new store instance stands for the app being restarted.
@@ -139,7 +142,7 @@ class SettingsPersistenceTest {
 
     @Test
     fun `the file is human readable`() {
-        val text = SettingsJson.encode(customised(everyPattern[1]))
+        val text = SettingsJson.encode(customised(everyPattern[4]))
         assertTrue("\"type\": \"three-color-gradient\"" in text, text)
         assertTrue("\"start\": \"#010203\"" in text, text)
         assertTrue("\"staggerDelayMs\": 320" in text, text)

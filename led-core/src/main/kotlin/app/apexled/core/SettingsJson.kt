@@ -48,11 +48,11 @@ object SettingsJson {
     private data class SettingsFile(
         val version: Int = VERSION,
         val mode: ControlMode = ControlMode.PATTERN,
-        val pattern: PatternDto = PatternDto.ContinuousGradient,
+        val pattern: PatternDto = PatternDto.PwmSpectrum,
         val input: InputDto = InputDto(),
         val brightness: BrightnessDto = BrightnessDto(),
         val sync: SyncDto = SyncDto(),
-        val criticalStyle: CriticalStyle = CriticalStyle.SOLID,
+        val criticalStyle: CriticalStyle = CriticalStyle.FLASH,
         val safety: SafetyDto = SafetyDto(),
         val manual: ManualDto = ManualDto(),
         val boards: List<BoardDto> = emptyList(),
@@ -63,6 +63,18 @@ object SettingsJson {
 
     @Serializable
     private sealed interface PatternDto {
+        @Serializable
+        @SerialName("pwm-spectrum")
+        data object PwmSpectrum : PatternDto
+
+        @Serializable
+        @SerialName("custom-spectrum")
+        data class CustomSpectrum(val colors: List<String>) : PatternDto
+
+        @Serializable
+        @SerialName("speed-blink")
+        data class SpeedBlink(val first: String, val second: String, val maxHz: Double = 5.0) : PatternDto
+
         @Serializable
         @SerialName("continuous-gradient")
         data object ContinuousGradient : PatternDto
@@ -112,7 +124,7 @@ object SettingsJson {
 
     @Serializable
     private data class SafetyDto(
-        val pwmPercent: Double? = null,
+        val pwmPercent: Double? = SafetyConfig.DEFAULT_PWM_PERCENT,
         val speedKmh: Double? = null,
         val temperatureC: Double? = null,
         val currentA: Double? = null,
@@ -175,6 +187,9 @@ object SettingsJson {
     )
 
     private fun Pattern.toDto(): PatternDto = when (this) {
+        Pattern.PwmSpectrum -> PatternDto.PwmSpectrum
+        is Pattern.CustomSpectrum -> PatternDto.CustomSpectrum(colors.map { it.toHex() })
+        is Pattern.SpeedBlink -> PatternDto.SpeedBlink(first.toHex(), second.toHex(), maxHz)
         Pattern.ContinuousGradient -> PatternDto.ContinuousGradient
         is Pattern.ThreeColorGradient -> PatternDto.ThreeColorGradient(start.toHex(), middle.toHex(), end.toHex(), midpoint)
         is Pattern.Pulse -> PatternDto.Pulse(
@@ -193,6 +208,9 @@ object SettingsJson {
     }
 
     private fun PatternDto.toPattern(): Pattern = when (this) {
+        PatternDto.PwmSpectrum -> Pattern.PwmSpectrum
+        is PatternDto.CustomSpectrum -> Pattern.CustomSpectrum(colors.map(Rgb::fromHex))
+        is PatternDto.SpeedBlink -> Pattern.SpeedBlink(Rgb.fromHex(first), Rgb.fromHex(second), maxHz)
         PatternDto.ContinuousGradient -> Pattern.ContinuousGradient
         is PatternDto.ThreeColorGradient ->
             Pattern.ThreeColorGradient(Rgb.fromHex(start), Rgb.fromHex(middle), Rgb.fromHex(end), midpoint)

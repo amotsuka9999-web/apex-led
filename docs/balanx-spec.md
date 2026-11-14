@@ -29,7 +29,9 @@ teto do que o app pode oferecer.
 - Não foi encontrada placa LED fabricada pela **Nosfet**; a Nosfet aparece como
   fabricante de monociclos (Apex, Aero, Aeon), sem SDK nem documentação de LEDs publicados.
 - Versão do app analisada: **nenhuma** (Q1).
-- Modelo da placa: **desconhecido** (Q1). Para fita COB RGB os candidatos naturais são
+- Modelo da placa: **SP621E** (especificação revisada), controladora mini para fita
+  endereçável da mesma linha. O texto original desta linha, abaixo, é anterior a essa informação.
+- Modelo da placa (registro anterior): desconhecido (Q1). Para fita COB RGB os candidatos naturais são
   os modelos PWM RGB (SP613E, SP623E, SP633E, SP643E) e o multifunção SP630E.
 
 ## 3. Estrutura do app (de resumos dos manuais do SP630E)

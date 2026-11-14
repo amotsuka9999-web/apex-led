@@ -26,6 +26,24 @@ protocolo, até onde a pesquisa alcançou; a Nosfet também não (ver Q7).
 - Uma conexão por vez.
 - Sem pareamento nem autenticação descritos.
 
+## Placa especificada: SP621E (`sp621e`, padrão)
+
+Mensagem `A0 <op> <n> <dados>` (fonte: `ZephyrSai/rgb-strip-remote`, que agrupa SP611E,
+SP617E, SP620E e SP621E). Verificado por `Sp621eProtocolTest` contra o simulador, **não em hardware**.
+
+| Operação | Bytes |
+|---|---|
+| Ligar / desligar | `A0 62 01 <1/0>` |
+| Efeito | `A0 63 01 <n>` (cor sólida = `BE`) |
+| Brilho | `A0 66 01 <nível>` |
+| Velocidade do efeito | `A0 67 01 <1–10>` |
+| Comprimento do efeito | `A0 68 01 <1–150>` |
+| Cor | `A0 69 04 <R> <G> <B> <nível>` |
+
+Leitura de status, estado ao energizar, timers e demais opções não estão documentados nas
+fontes para esta família e não foram implementados. A SP621E é uma controladora de fita
+endereçável (ver Q17).
+
 ## Famílias
 
 O app do fabricante usa formatos diferentes conforme o modelo. Como o modelo é

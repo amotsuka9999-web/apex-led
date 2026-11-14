@@ -4,7 +4,19 @@ Data: 2026-11-14. Ambiente: JVM (JDK 21, bytecode Java 17), sem Android SDK e se
 
 ## O que foi testado
 
-166 testes unitários, todos passando (`./gradlew test`).
+178 testes unitários, todos passando, já com os Modos 1, 2 e 3, o crítico em 96 % e o
+protocolo `sp621e` da especificação revisada.
+
+Observação sobre a última execução: o Maven Central passou a limitar os downloads deste
+ambiente (HTTP 429) e o Gradle deixou de resolver dependências. A execução final dos 178
+testes foi feita chamando diretamente o compilador Kotlin 2.2.10 e o JUnit 5 que já estavam no
+cache local, com avisos tratados como erro. Vale repetir com `./gradlew test` em uma
+máquina sem esse limite.
+
+**Módulos Android (`led-android`, `app`): o enlace Bluetooth e a busca compilaram com o
+Gradle antes do limite; as telas e o app de bancada foram escritos depois e NÃO foram
+compilados nem executados.** Trate-os como rascunho até o primeiro
+`./gradlew :app:assembleDebug`.
 
 | Módulo | Testes | O que cobrem |
 |---|---:|---|
@@ -46,7 +58,7 @@ Esses pontos estão no [checklist de campo](checklist-campo.md).
   ser levantados sem o app. As funções da placa com comando documentado estão
   codificadas e testadas contra o simulador; timers, tipo de LED, ordem dos canais e
   edição de efeito personalizado não estão.
-- **App Android:** nenhuma tela, nem a integração com o WheelLog. Motivos: base não
+- **App Android:** as telas existem como rascunho não compilado (ver acima); a integração com o WheelLog não foi feita. Motivos: base não
   confirmada (Q6), SDK do Android indisponível neste ambiente (download bloqueado pela
   rede) e spec incompleta. O desenho da integração está em
   [wheellog-integracao.md](wheellog-integracao.md).

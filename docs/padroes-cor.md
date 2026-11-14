@@ -4,6 +4,52 @@ Este documento descreve exatamente o que o motor de padrões (`pattern-engine`) 
 As tabelas de exemplo são verificadas por teste (`DocumentedExamplesTest`): se o código
 mudar, o teste falha e este documento precisa ser atualizado.
 
+## Modos da especificação revisada
+
+Estes são os três modos oferecidos na tela. Testes: `ModesTest`.
+
+### Modo 1: espectro por PWM (`Pattern.PwmSpectrum`, padrão)
+
+| Entrada | 0 % | 24 % | 48 % | 72 % | 96 % ou mais |
+|---|---|---|---|---|---|
+| Cor | azul `#0000FF` | verde `#00FF00` | amarelo `#FFFF00` | laranja `#FF8000` | vermelho `#FF0000` |
+
+Entre dois pontos a cor é interpolada linearmente por canal, em RGB (decisão da Fase 3;
+ver Q19). Exemplos: 12 % → `#008080`, 36 % → `#80FF00`, 84 % → `#FF4000`. A faixa é contínua:
+0,1 % de entrada move qualquer canal em no máximo 2 passos.
+
+### Modo 2: espectro personalizado (`Pattern.CustomSpectrum`)
+
+Mesmos cinco pontos (0, 24, 48, 72, 96 %), cada um com a cor escolhida pelo usuário, mesma
+interpolação. A tela tem um seletor por ponto e a faixa completa de pré-visualização.
+
+### Modo 3: pisca entre duas cores (`Pattern.SpeedBlink`)
+
+```
+frequência = frequência_máxima × t        (t = posição da entrada, 0 a 1)
+```
+
+- Entrada padrão: velocidade (0 a `v_max`, 50 km/h por padrão). Pode ser trocada para PWM.
+- `t = 0`: fica fixo na primeira cor.
+- Cada ciclo mostra a primeira cor na primeira metade e a segunda na outra.
+- Frequência máxima: 5 Hz por padrão, ajustável de 0,5 a 10 Hz. Acima da faixa de
+  velocidade a frequência não passa do limite. A tela mostra o limite e um aviso sobre
+  fotossensibilidade.
+- Verificado por teste: 10 km/h → 1 Hz, 25 km/h → 2,5 Hz, 50 km/h ou mais → 5 Hz.
+- Limitação conhecida: salto de fase quando a velocidade muda (Q18).
+
+### Alerta crítico em 96 % de PWM
+
+- Padrão: PWM ≥ 96 % é crítico (`SafetyConfig.pwmPercent = 96`), além dos alarmes do app.
+- Aparência padrão: **vermelho piscando** a 2 Hz, alternando entre o limite máximo de brilho e
+  25 % dele, sem nunca apagar. É diferente do vermelho fixo que o Modo 1 mostra ao chegar
+  perto de 96 %. Alternativa configurável: vermelho fixo.
+- Continua valendo tudo da seção 6: sobrepõe qualquer modo, não é defasado nem suavizado,
+  não tem opção nos padrões.
+
+As seções seguintes descrevem a base comum e os padrões do rascunho anterior (P1, P2, P3,
+transição), que continuam no motor mas não aparecem na tela.
+
 ## Visão geral
 
 O motor é uma função pura:

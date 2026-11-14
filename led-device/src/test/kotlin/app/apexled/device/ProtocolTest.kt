@@ -2,8 +2,10 @@ package app.apexled.device
 
 import app.apexled.device.protocol.ProtocolRegistry
 import app.apexled.device.protocol.Sp61xPwmProtocol
+import app.apexled.device.protocol.Sp621eProtocol
 import app.apexled.device.protocol.Sp63xProtocol
 import app.apexled.device.sim.Sp61xPwmFirmware
+import app.apexled.device.sim.Sp621eFirmware
 import app.apexled.device.sim.Sp63xFirmware
 import app.apexled.pattern.LedFrame
 import app.apexled.pattern.Rgb
@@ -174,11 +176,41 @@ class Sp61xPwmProtocolTest {
     }
 }
 
+class Sp621eProtocolTest {
+
+    private val protocol = Sp621eProtocol
+
+    @Test
+    fun `messages follow A0 opcode length data`() {
+        assertEquals(listOf("A0 62 01 01", "A0 63 01 BE"), protocol.enterDirectColor().hex())
+        assertEquals(listOf("A0 69 04 FF 00 00 80"), protocol.frame(LedFrame(Rgb.RED, 0.5)).hex())
+        assertEquals(listOf("A0 62 01 00"), protocol.encode(BoardCommand.Power(false)).hex())
+        assertEquals(listOf("A0 66 01 FF"), protocol.encode(BoardCommand.Brightness(255)).hex())
+        assertEquals(listOf("A0 67 01 0A"), protocol.encode(BoardCommand.EffectSpeed(10)).hex())
+        assertEquals(listOf("A0 68 01 96"), protocol.encode(BoardCommand.EffectLength(150)).hex())
+        assertEquals(listOf("A0 63 01 07"), protocol.encode(BoardCommand.SelectEffect(LightMode.DYNAMIC, 7)).hex())
+        assertNull(protocol.encode(BoardCommand.SetPowerOnState(PowerOnState.ON)))
+        assertNull(protocol.encode(BoardCommand.QueryStatus))
+    }
+
+    @Test
+    fun `simulated firmware follows frames`() {
+        val firmware = Sp621eFirmware()
+        protocol.enterDirectColor().forEach { firmware.receive(it) }
+        protocol.frame(LedFrame(Rgb.YELLOW, 1.0)).forEach { firmware.receive(it) }
+        assertTrue(firmware.light.showsSolidColor)
+        assertEquals(Rgb.YELLOW, firmware.light.color)
+        assertEquals(0, firmware.rejected)
+    }
+}
+
 class ProtocolRegistryTest {
 
     @Test
     fun `protocols are found by id`() {
         val registry = ProtocolRegistry()
+        assertEquals(Sp621eProtocol, registry["sp621e"])
+        assertEquals(Sp621eProtocol, registry.all.first(), "the specified board is the default choice")
         assertEquals(Sp63xProtocol, registry["sp63x"])
         assertEquals(Sp61xPwmProtocol, registry["sp61x-pwm"])
         assertNull(registry["nope"])

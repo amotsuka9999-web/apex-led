@@ -2,6 +2,7 @@ package app.apexled.device.sim
 
 import app.apexled.device.LightMode
 import app.apexled.device.protocol.Sp61xPwmProtocol
+import app.apexled.device.protocol.Sp621eProtocol
 import app.apexled.device.protocol.Sp63xProtocol
 import app.apexled.pattern.Rgb
 
@@ -143,6 +144,43 @@ class Sp61xPwmFirmware : BoardFirmware {
             )
             Sp61xPwmProtocol.Opcode.EFFECT_SPEED -> light = light.copy(effectSpeed = data[0])
             Sp61xPwmProtocol.Opcode.STATUS -> Unit
+            else -> rejected++
+        }
+        return emptyList()
+    }
+}
+
+/** Simulated SP621E, mirroring the layout [Sp621eProtocol] encodes. */
+class Sp621eFirmware : BoardFirmware {
+
+    @Volatile override var light = SimLight()
+        private set
+
+    @Volatile override var rejected = 0
+        private set
+
+    override fun reset() {
+        light = SimLight()
+    }
+
+    override fun receive(payload: ByteArray): List<ByteArray> {
+        if (payload.size < 3 || (payload[0].toInt() and 0xFF) != Sp621eProtocol.HEADER ||
+            (payload[2].toInt() and 0xFF) != payload.size - 3
+        ) {
+            rejected++
+            return emptyList()
+        }
+        val data = IntArray(payload.size - 3) { payload[3 + it].toInt() and 0xFF }
+        when (payload[1].toInt() and 0xFF) {
+            Sp621eProtocol.Opcode.POWER -> light = light.copy(power = data[0] != 0)
+            Sp621eProtocol.Opcode.BRIGHTNESS -> light = light.copy(level = data[0])
+            Sp621eProtocol.Opcode.COLOR -> light = light.copy(color = Rgb(data[0], data[1], data[2]), level = data[3])
+            Sp621eProtocol.Opcode.EFFECT -> light = light.copy(
+                mode = if (data[0] == Sp621eProtocol.EFFECT_SOLID) LightMode.STATIC else LightMode.DYNAMIC,
+                effect = data[0],
+            )
+            Sp621eProtocol.Opcode.EFFECT_SPEED -> light = light.copy(effectSpeed = data[0])
+            Sp621eProtocol.Opcode.EFFECT_LENGTH -> light = light.copy(effectLength = data[0])
             else -> rejected++
         }
         return emptyList()

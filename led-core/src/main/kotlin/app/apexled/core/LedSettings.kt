@@ -4,7 +4,9 @@ import app.apexled.device.BoardCommand
 import app.apexled.device.BoardInfo
 import app.apexled.device.BoardManager
 import app.apexled.device.LightMode
+import app.apexled.pattern.CriticalStyle
 import app.apexled.pattern.EngineConfig
+import app.apexled.pattern.Pattern
 import app.apexled.pattern.Rgb
 
 /** Who decides what the boards show. */
@@ -65,7 +67,7 @@ data class ManualLight(
 data class LedSettings(
     val mode: ControlMode = ControlMode.PATTERN,
     /** Pattern, input, brightness and sync: the same for every board. */
-    val engine: EngineConfig = EngineConfig(),
+    val engine: EngineConfig = DEFAULT_ENGINE,
     val safety: SafetyConfig = SafetyConfig(),
     val manual: ManualLight = ManualLight(),
     /** Registered boards, in stagger order. */
@@ -85,5 +87,8 @@ data class LedSettings(
 
     companion object {
         const val MAX_SMOOTHING_MS = 5_000L
+
+        /** Mode 1, with a flashing critical indicator so it cannot be mistaken for the red end of the spectrum. */
+        val DEFAULT_ENGINE = EngineConfig(pattern = Pattern.PwmSpectrum, criticalStyle = CriticalStyle.FLASH)
     }
 }

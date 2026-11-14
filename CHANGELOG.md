@@ -4,7 +4,19 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Não lançado]
 
+### Alterado pela especificação revisada
+- Modos de cor: Modo 1 (espectro azul, verde, amarelo, laranja, vermelho em 0, 24, 48, 72 e
+  96 %), Modo 2 (os mesmos cinco pontos com cores do usuário) e Modo 3 (alternância entre duas
+  cores, mais rápida com a velocidade, limite padrão de 5 Hz). São os modos da tela; os
+  padrões do rascunho anterior continuam só no motor.
+- PWM ≥ 96 % passa a ser crítico por padrão, e o alerta passa a ser vermelho piscando por
+  padrão, para não se confundir com o vermelho do Modo 1.
+- Protocolo `sp621e` para a placa especificada, agora a opção padrão.
+
 ### Adicionado
+- Módulo Android `led-android`: enlace Bluetooth LE das placas, busca de placas e telas
+  (padrões com pré-visualização, placas, manual, alerta). As telas ainda não foram compiladas; nada foi testado em aparelho.
+- App de bancada (`app`): hospeda as telas com uma roda simulada por controles deslizantes.
 - Projeto Gradle com três módulos Kotlin/JVM sem dependência de Android:
   `pattern-engine`, `led-device` e `led-core`.
 - Motor de padrões (R2): P1 gradiente contínuo azul → vermelho; P2 gradiente de três
@@ -23,7 +35,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - Controlador: telemetria → padrões → placas, suavização da entrada, comportamento sem
   telemetria, modo manual com as funções da própria placa.
 - Persistência das configurações em JSON versionado, com recuperação de arquivo corrompido.
-- 166 testes unitários.
+- 178 testes unitários.
 - Documentação: questões em aberto, spec do app de referência (incompleta), mapeamento
   de cores, protocolo, integração com o WheelLog, arquitetura, checklist de campo e
   relatório de testes.

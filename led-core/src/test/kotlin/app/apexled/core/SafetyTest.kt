@@ -11,8 +11,14 @@ class SafetyTest {
     private val calm = WheelTelemetry(speedKmh = 20.0, pwmPercent = 30.0, temperatureC = 40.0, currentA = 10.0, voltageV = 140.0)
 
     @Test
-    fun `nothing is critical by default except an app alarm`() {
-        val config = SafetyConfig()
+    fun `96 percent PWM is critical by default`() {
+        assertEquals(emptySet(), SafetyConfig().causes(calm.copy(pwmPercent = 95.9)))
+        assertEquals(setOf(CriticalCause.PWM), SafetyConfig().causes(calm.copy(pwmPercent = 96.0)))
+    }
+
+    @Test
+    fun `with no threshold only an app alarm is critical`() {
+        val config = SafetyConfig(pwmPercent = null)
         assertEquals(emptySet(), config.causes(calm))
         assertEquals(emptySet(), config.causes(calm.copy(speedKmh = 200.0, pwmPercent = 100.0, temperatureC = 150.0)))
         assertEquals(setOf(CriticalCause.APP_ALARM), config.causes(calm.copy(appAlarm = true)))
@@ -48,7 +54,7 @@ class SafetyTest {
 
     @Test
     fun `values the wheel does not report never trigger`() {
-        val config = SafetyConfig(temperatureC = 70.0, currentA = 100.0, voltageBelowV = 120.0)
+        val config = SafetyConfig(pwmPercent = null, temperatureC = 70.0, currentA = 100.0, voltageBelowV = 120.0)
         val bare = WheelTelemetry(speedKmh = 10.0, pwmPercent = 10.0)
         assertEquals(emptySet(), config.causes(bare))
         assertEquals(emptySet(), config.causes(bare.copy(temperatureC = Double.NaN, currentA = Double.NaN, voltageV = Double.NaN)))

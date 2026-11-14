@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Abas -->
+    <string name="led_tab_patterns">Padrões</string>
+    <string name="led_tab_boards">Placas</string>
+    <string name="led_tab_manual">Manual</string>
+    <string name="led_tab_alert">Alerta</string>
+
+    <!-- Geral -->
+    <string name="led_add">Adicionar</string>
+    <string name="led_cancel">Cancelar</string>
+    <string name="led_close">Fechar</string>
+    <string name="led_save">Salvar</string>
+    <string name="led_remove">Remover</string>
+    <string name="led_rename">Renomear</string>
+    <string name="led_color">Cor</string>
+    <string name="led_red">Vermelho</string>
+    <string name="led_green">Verde</string>
+    <string name="led_blue">Azul</string>
+    <string name="led_brightness">Brilho</string>
+    <string name="led_percent">%1$d %%</string>
+    <string name="led_range_percent">%1$d–%2$d %%</string>
+    <string name="led_kmh">%1$d km/h</string>
+    <string name="led_ms">%1$d ms</string>
+    <string name="led_hz">%1$.1f Hz</string>
+    <string name="led_celsius">%1$d °C</string>
+    <string name="led_amps">%1$d A</string>
+    <string name="led_volts">%1$d V</string>
+    <string name="led_banner_critical">Alerta crítico ativo: placas em vermelho.</string>
+    <string name="led_save_failed">Não foi possível salvar as configurações: %1$s</string>
+    <string name="led_notice_duplicate">Esta placa já está na lista.</string>
+    <string name="led_notice_protocol">Protocolo desconhecido: %1$s</string>
+    <string name="led_notice_invalid">Valor não aceito: %1$s</string>
+    <string name="led_notice_scan">A busca Bluetooth falhou: %1$s</string>
+    <string name="led_notice_unsupported">Estas placas não têm essa função: %1$s</string>
+
+    <!-- Padrões -->
+    <string name="led_preview">Pré-visualização</string>
+    <string name="led_preview_description">Faixa de cores do padrão, de 0 a 100 por cento. Entrada atual em %1$d por cento.</string>
+    <string name="led_live_none">Nenhuma placa recebendo cor</string>
+    <string name="led_input">Entrada</string>
+    <string name="led_input_pwm">PWM</string>
+    <string name="led_input_speed">Velocidade</string>
+    <string name="led_speed_max">Velocidade no fim da faixa</string>
+    <string name="led_pattern">Padrão</string>
+    <string name="led_mode_1">1 · Espectro</string>
+    <string name="led_mode_2">2 · Espectro personalizado</string>
+    <string name="led_mode_3">3 · Pisca por velocidade</string>
+    <string name="led_mode_1_hint" formatted="false">Azul, verde, amarelo, laranja e vermelho em 0, 24, 48, 72 e 96 % da entrada. A partir de 96 % de PWM entra o alerta crítico.</string>
+    <string name="led_mode_2_hint" formatted="false">Uma cor para cada ponto: 0, 24, 48, 72 e 96 % da entrada.</string>
+    <string name="led_mode_3_hint">Alterna entre duas cores, mais rápido quanto maior a entrada. Em zero fica na primeira cor.</string>
+    <string name="led_stop">Cor em %1$d %%</string>
+    <string name="led_blink_first">Primeira cor</string>
+    <string name="led_blink_second">Segunda cor</string>
+    <string name="led_blink_max">Frequência máxima</string>
+    <string name="led_blink_warning">Alternância rápida de luz pode causar desconforto ou crises em pessoas com epilepsia fotossensível. Mantenha o limite baixo.</string>
+    <string name="led_pattern_continuous_hint">Do azul (entrada em zero) ao vermelho (entrada no máximo), passando por ciano, verde e amarelo.</string>
+    <string name="led_color_start">Cor de início</string>
+    <string name="led_color_middle">Cor do meio</string>
+    <string name="led_color_end">Cor de fim</string>
+    <string name="led_midpoint">Posição da cor do meio</string>
+    <string name="led_pulse_hint">Vale o primeiro item cuja faixa contém a entrada.</string>
+    <string name="led_pulse_item">Item %1$d</string>
+    <string name="led_pulse_add">Adicionar item</string>
+    <string name="led_pulse_blink">Piscar</string>
+    <string name="led_pulse_breathe">Respirar</string>
+    <string name="led_pulse_frequency">Frequência</string>
+    <string name="led_pulse_range">Faixa de atuação</string>
+    <string name="led_pulse_levels">Brilho mínimo e máximo</string>
+    <string name="led_pulse_duty">Tempo aceso por ciclo</string>
+    <string name="led_pulse_idle">Luz fixa fora das faixas</string>
+    <string name="led_sequence_hint">Modo ainda em proposta. As cores são distribuídas igualmente ao longo da entrada.</string>
+    <string name="led_sequence_color">Cor %1$d</string>
+    <string name="led_sequence_add">Adicionar cor</string>
+    <string name="led_sequence_smooth">Transição suave entre as cores</string>
+    <string name="led_brightness_master">Brilho geral</string>
+    <string name="led_brightness_max">Limite máximo de brilho</string>
+    <string name="led_brightness_max_hint">Nada passa do limite máximo, nem o alerta. O alerta ignora o brilho geral.</string>
+    <string name="led_sync">Várias placas</string>
+    <string name="led_sync_together">Sincronizado</string>
+    <string name="led_sync_staggered">Defasado</string>
+    <string name="led_sync_delay">Atraso por placa</string>
+    <string name="led_behaviour">Comportamento</string>
+    <string name="led_smoothing">Suavização da entrada</string>
+    <string name="led_telemetry_loss">Sem dados da roda</string>
+    <string name="led_loss_zero">Cor de entrada zero</string>
+    <string name="led_loss_hold">Manter a última</string>
+    <string name="led_loss_off">Apagar</string>
+
+    <!-- Placas -->
+    <string name="led_boards_title">Placas (%1$d de %2$d)</string>
+    <string name="led_boards_empty">Nenhuma placa cadastrada.</string>
+    <string name="led_boards_full">Limite de placas atingido.</string>
+    <string name="led_scan">Procurar placas</string>
+    <string name="led_scanning">Procurando…</string>
+    <string name="led_scan_stopped">Busca encerrada</string>
+    <string name="led_scan_empty">Nenhum dispositivo novo encontrado até agora.</string>
+    <string name="led_scan_row">%1$s · sinal %2$d dBm</string>
+    <string name="led_scan_likely">Parece ser uma placa LED</string>
+    <string name="led_unnamed">Sem nome</string>
+    <string name="led_add_board">Adicionar placa</string>
+    <string name="led_add_simulated">Adicionar placa simulada</string>
+    <string name="led_board_name">Nome</string>
+    <string name="led_board_default_name">Placa %1$d</string>
+    <string name="led_protocol">Protocolo</string>
+    <string name="led_protocol_hint">Depende do modelo da placa. Se ela não responder, remova e adicione de novo com o outro.</string>
+    <string name="led_move_up">Subir</string>
+    <string name="led_move_down">Descer</string>
+    <string name="led_remove_title">Remover %1$s?</string>
+    <string name="led_remove_text">A placa será desconectada e sairá da lista.</string>
+    <string name="led_state_disconnected">Desconectada</string>
+    <string name="led_state_connecting">Conectando…</string>
+    <string name="led_state_ready">Conectada</string>
+    <string name="led_state_reconnecting">Sem conexão. Tentativa %1$d em %2$d s</string>
+
+    <!-- Manual -->
+    <string name="led_control">Quem controla a luz</string>
+    <string name="led_control_pattern">Padrão pela roda</string>
+    <string name="led_control_manual">Manual</string>
+    <string name="led_control_hint">No modo manual valem as funções da própria placa. O alerta crítico continua valendo.</string>
+    <string name="led_manual_light">Luz manual</string>
+    <string name="led_power">Ligada</string>
+    <string name="led_mode_static">Cor fixa</string>
+    <string name="led_mode_dynamic">Efeito</string>
+    <string name="led_mode_music">Música</string>
+    <string name="led_mode_custom">Personalizado</string>
+    <string name="led_effect">Número do efeito</string>
+    <string name="led_effect_hint">A lista de efeitos depende do modelo da placa.</string>
+    <string name="led_effect_speed">Velocidade do efeito</string>
+    <string name="led_effect_length">Comprimento do efeito</string>
+    <string name="led_board_options">Opções gravadas na placa</string>
+    <string name="led_board_options_hint">Enviadas na hora a todas as placas conectadas.</string>
+    <string name="led_power_on_state">Ao receber energia, a placa fica:</string>
+    <string name="led_power_on_off">Desligada</string>
+    <string name="led_power_on_on">Ligada</string>
+    <string name="led_power_on_last">Como estava</string>
+
+    <!-- Alerta -->
+    <string name="led_alert_now">Estado agora</string>
+    <string name="led_alert_clear">Normal</string>
+    <string name="led_alert_active">Crítico: %1$s</string>
+    <string name="led_alert_holding">Crítico (causa cessou; aguardando o tempo de retenção)</string>
+    <string name="led_alert_causes">O que conta como crítico</string>
+    <string name="led_alert_app_alarm">Um alarme disparado pelo app sempre deixa as placas vermelhas. Isso não pode ser desligado.</string>
+    <string name="led_alert_pwm">PWM alto</string>
+    <string name="led_alert_speed">Velocidade alta</string>
+    <string name="led_alert_temperature">Temperatura alta</string>
+    <string name="led_alert_current">Corrente alta</string>
+    <string name="led_alert_voltage">Tensão baixa</string>
+    <string name="led_alert_threshold">Limiar</string>
+    <string name="led_alert_defaults_hint">Os valores iniciais são só um ponto de partida. Ajuste para a sua roda.</string>
+    <string name="led_alert_look">Aparência do alerta</string>
+    <string name="led_alert_solid">Vermelho fixo</string>
+    <string name="led_alert_flash">Vermelho piscando</string>
+    <string name="led_alert_hold">Manter após a causa cessar</string>
+    <string name="led_alert_disclaimer">As placas são um aviso adicional. Elas não substituem os alarmes do app.</string>
+    <string name="led_cause_app">alarme do app</string>
+    <string name="led_cause_pwm">PWM</string>
+    <string name="led_cause_speed">velocidade</string>
+    <string name="led_cause_temperature">temperatura</string>
+    <string name="led_cause_current">corrente</string>
+    <string name="led_cause_voltage">tensão</string>
+</resources>

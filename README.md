@@ -3,8 +3,8 @@
 Controle de fitas LED COB para monociclo elétrico, com cores guiadas pela telemetria da
 roda (velocidade e PWM). Base prevista: WheelLog (Android).
 
-**Estado:** lógica central pronta e testada em JVM; app Android e validação em hardware
-pendentes. Ver [docs/relatorio-testes.md](docs/relatorio-testes.md).
+**Estado:** lógica central pronta e testada em JVM; módulos Android em rascunho (telas
+ainda não compiladas); validação em hardware pendente. Ver [docs/relatorio-testes.md](docs/relatorio-testes.md).
 
 ## O que existe
 
@@ -14,7 +14,11 @@ pendentes. Ver [docs/relatorio-testes.md](docs/relatorio-testes.md).
 | `led-device` | protocolo das placas, fila de comandos, reconexão, gerenciador de placas e simulador |
 | `led-core` | controlador (telemetria → padrões → placas), regras do alerta crítico, persistência das configurações |
 
-Nenhum módulo depende de Android.
+| `led-android` | enlace Bluetooth LE, busca de placas e telas (Compose) |
+| `app` | app de bancada: as telas acima com uma roda simulada, para testar placas sem a roda |
+
+Os três primeiros não dependem de Android. Os dois últimos só entram no build quando há
+um SDK do Android configurado (`local.properties` ou `ANDROID_HOME`).
 
 ## Compilar e testar
 

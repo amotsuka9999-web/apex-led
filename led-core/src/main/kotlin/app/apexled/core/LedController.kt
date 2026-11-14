@@ -49,6 +49,11 @@ class LedController(
     /** The frames last handed to the boards (empty while the boards run their own effects). For the live preview. */
     val frames: StateFlow<List<LedFrame>> = _frames.asStateFlow()
 
+    private val _position = MutableStateFlow(0.0)
+
+    /** Where the driving input currently sits along the pattern, 0..1. For the marker on the preview strip. */
+    val position: StateFlow<Double> = _position.asStateFlow()
+
     private val _saveError = MutableStateFlow<String?>(null)
 
     /** Set when the last attempt to save the settings failed, cleared by the next successful save. */
@@ -182,6 +187,7 @@ class LedController(
                 else -> null
             }
             history = history.plus(now, sample ?: WheelSample.ZERO)
+            _position.value = PatternEngine.position(sample ?: WheelSample.ZERO, current.engine.input)
 
             val count = boards.size
             val frames = when {

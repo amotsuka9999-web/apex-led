@@ -30,7 +30,7 @@ interface LedProtocol {
 }
 
 /** The protocols the app can talk. */
-class ProtocolRegistry(protocols: List<LedProtocol> = listOf(Sp63xProtocol, Sp61xPwmProtocol)) {
+class ProtocolRegistry(protocols: List<LedProtocol> = listOf(Sp621eProtocol, Sp63xProtocol, Sp61xPwmProtocol)) {
     private val byId = protocols.associateBy { it.id }
 
     init {

@@ -31,13 +31,20 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+/** Settings most tests run on: continuous gradient, solid alert, no PWM threshold, no smoothing. */
+private val LEGACY = LedSettings(
+    engine = app.apexled.pattern.EngineConfig(),
+    safety = SafetyConfig(pwmPercent = null),
+    smoothingMs = 0,
+)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class LedControllerTest {
 
     /** A controller wired to simulated boards on virtual time. Smoothing is off unless a test turns it on. */
     private class Rig(
         private val scope: TestScope,
-        val store: SettingsStore = InMemorySettingsStore(LedSettings(smoothingMs = 0)),
+        val store: SettingsStore = InMemorySettingsStore(LEGACY),
     ) {
         val sims = mutableMapOf<String, SimulatedBoard>()
         private val now = { scope.testScheduler.currentTime }
@@ -70,6 +77,24 @@ class LedControllerTest {
         }
     }
 
+    @Test
+    fun `first run uses mode 1 and treats 96 percent PWM as critical with a flashing red`() = runTest {
+        val rig = Rig(this, InMemorySettingsStore(LedSettings(smoothingMs = 0)))
+        rig.start(1)
+        rig.ride(pwm(48.0), 500)
+        assertEquals(Rgb.YELLOW, rig.light(1).color)
+        rig.ride(pwm(95.0), 500)
+        assertFalse(rig.controller.critical.value.active)
+        val levels = mutableSetOf<Int>()
+        repeat(20) {
+            rig.ride(pwm(96.0), 100)
+            levels += rig.light(1).level
+        }
+        assertEquals(setOf(CriticalCause.PWM), rig.controller.critical.value.causes)
+        assertEquals(Rgb.RED, rig.light(1).color)
+        assertEquals(setOf(64, 255), levels)
+    }
+
     private fun pwm(percent: Double, appAlarm: Boolean = false) =
         WheelTelemetry(speedKmh = 0.0, pwmPercent = percent, appAlarm = appAlarm)
 
@@ -85,9 +110,11 @@ class LedControllerTest {
 
         rig.ride(pwm(50.0), 500)
         assertEquals(List(3) { Rgb.GREEN }, rig.colors())
+        assertEquals(0.5, rig.controller.position.value)
 
         rig.ride(pwm(100.0), 500)
         assertEquals(List(3) { Rgb.RED }, rig.colors())
+        assertEquals(1.0, rig.controller.position.value)
         assertTrue((1..3).all { rig.light(it).showsSolidColor })
         assertFalse(rig.controller.critical.value.active, "100 % PWM is the hot end of the pattern, not an alert")
     }
@@ -468,7 +495,7 @@ class LedControllerTest {
 
     @Test
     fun `settings and boards survive a restart`() = runTest {
-        val store = InMemorySettingsStore(LedSettings(smoothingMs = 0))
+        val store = InMemorySettingsStore(LEGACY)
         val first = Rig(this, store)
         first.start(2)
         first.controller.update {
