@@ -30,6 +30,10 @@ Respostas do dono do projeto (2026-11-14, depois da especificação revisada):
   validado no A2 precisa ser conferido de novo na Nosfet. Falta saber o modelo da Nosfet e os
   firmwares.
 
+- **Q1 e Q17 respondidas:** a placa é a **SP621E**, com fita **COB endereçável de 3 fios**.
+  O codec `sp621e` é o correto para o modelo e o comando de cor sólida pinta a fita inteira,
+  que é o que os modos usam. Continua faltando validar os bytes em hardware.
+
 Dúvidas novas desta rodada:
 
 - **Q16. Primeiro ponto do Modo 1 é azul?** Implementado como azul (dúvida 2 da especificação).
