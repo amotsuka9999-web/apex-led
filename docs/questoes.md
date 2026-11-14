@@ -20,6 +20,16 @@ A especificação revisada respondeu parte das perguntas. O que vale agora:
 | Q8 vermelho crítico x vermelho do padrão | **Encaminhada:** o alerta agora é, por padrão, vermelho piscando a 2 Hz (entre o limite de brilho e 25 % dele), distinto do vermelho fixo do Modo 1; a opção "vermelho fixo" continua configurável. Falta a confirmação (dúvida 3). |
 | Q13 limites | O Modo 3 segue a decisão de projeto: limite padrão de 5 Hz, configurável de 0,5 a 10 Hz, com aviso na tela. |
 
+Respostas do dono do projeto (2026-11-14, depois da especificação revisada):
+
+- **Q7 respondida em parte:** o app de referência é o **BanlanX**. A placa que hoje é controlada
+  pelo BanlanX é a que este app vai controlar.
+- **Q2 respondida em parte:** a roda do projeto é da **Nosfet**; os testes iniciais serão feitos
+  com um **Begode A2**, que está em mãos. No WheelLog as rodas Begode usam o `GotwayAdapter`
+  (as Nosfet usam o `VeteranAdapter`), então o PWM vem por outro caminho em cada uma: o que for
+  validado no A2 precisa ser conferido de novo na Nosfet. Falta saber o modelo da Nosfet e os
+  firmwares.
+
 Dúvidas novas desta rodada:
 
 - **Q16. Primeiro ponto do Modo 1 é azul?** Implementado como azul (dúvida 2 da especificação).
