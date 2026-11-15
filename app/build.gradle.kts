@@ -12,8 +12,20 @@ android {
         applicationId = "app.apexled.monociclo"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // No CI, cada build ganha um número maior para o Android aceitar a atualização.
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+        versionName = "0.1." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
+    }
+
+    // Chave de debug fixa no repositório: todo APK sai com a mesma assinatura,
+    // então dá para atualizar o app sem desinstalar. Não usar para a Play Store.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {

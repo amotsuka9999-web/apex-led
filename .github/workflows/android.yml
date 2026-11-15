@@ -3,13 +3,17 @@ name: Android CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # necessário para publicar o APK em Releases
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -17,14 +21,30 @@ jobs:
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
       - name: Testes unitários
         run: ./gradlew test
       - name: Testes do analisador btsnoop
         run: python3 tools/test_btsnoop_gatt.py
       - name: APK debug
-        run: ./gradlew assembleDebug
-      - uses: actions/upload-artifact@v4
+        run: |
+          ./gradlew assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk apex-led.apk
+      - uses: actions/upload-artifact@v5
         with:
           name: apex-led-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: apex-led.apk
+
+      # Publica o APK num link fixo, que abre direto no celular (sem zip e sem login):
+      # https://github.com/amotsuka9999-web/apex-led/releases/latest/download/apex-led.apk
+      - name: Publicar APK em Releases
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/claude/'))
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest apex-led.apk \
+            --target "$GITHUB_SHA" \
+            --title "Apex LED v0.1.${GITHUB_RUN_NUMBER}" \
+            --notes "Build automático do commit ${GITHUB_SHA::7} (branch ${GITHUB_REF_NAME}). Baixe apex-led.apk no celular e toque para instalar." \
+            --latest

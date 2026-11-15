@@ -23,6 +23,16 @@ App Android (Kotlin + Jetpack Compose + Material 3) que lê a telemetria de um m
 
 Tudo que depende de hardware está em [docs/testes-em-campo.md](docs/testes-em-campo.md).
 
+## Instalar no celular (jeito fácil)
+
+1. No celular Android, abra este link:
+   **https://github.com/amotsuka9999-web/apex-led/releases/latest/download/apex-led.apk**
+2. Quando o download terminar, toque no arquivo `apex-led.apk`.
+3. Se o Android pedir, permita "Instalar apps desconhecidos" para o navegador e toque em **Instalar**.
+4. Abra o **Apex LED**. Para atualizar depois, repita o passo 1: o app é atualizado sem perder as configurações.
+
+O link sempre aponta para o último build da `main` (ou de uma branch `claude/*`). Não precisa de login no GitHub.
+
 ## Como compilar e instalar
 
 Requisitos: JDK 21 e Android SDK (plataforma 35). Crie `local.properties` com `sdk.dir=/caminho/do/sdk` (ou defina `ANDROID_HOME`).
