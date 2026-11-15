@@ -49,3 +49,16 @@ interface WheelDataSource {
     fun start()
     fun stop()
 }
+
+/** Relógio monotônico em ms, injetável para testes. Telemetria e motor de segurança devem usar o MESMO relógio. */
+fun interface Clock {
+    fun nowMs(): Long
+
+    companion object {
+        val SYSTEM = Clock { System.nanoTime() / 1_000_000L }
+    }
+}
+
+/** Preenche o percentual de bateria pela curva do perfil quando a roda não o informa. */
+fun Telemetry.withBatteryFrom(profile: WheelProfile): Telemetry =
+    if (batteryPercent != null) this else copy(batteryPercent = profile.batteryPercentFor(voltage))
