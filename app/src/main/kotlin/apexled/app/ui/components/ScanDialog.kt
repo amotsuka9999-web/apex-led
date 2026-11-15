@@ -48,7 +48,8 @@ fun ScanDialog(target: ScanTarget, onPick: (ScannedDevice) -> Unit, onDismiss: (
     }
 
     val list = found.values
-        .filter { showAll || it.name != null }
+        // Mostra também aparelhos sem nome que tenham cara de SP6xx ou de roda (o SP621E às vezes anuncia sem nome).
+        .filter { showAll || it.name != null || it.looksLikeSpLed || it.hasFfe0 }
         .sortedWith(
             compareByDescending<ScannedDevice> { if (target == ScanTarget.LED) it.looksLikeSpLed else it.hasFfe0 }
                 .thenByDescending { it.rssi },
@@ -64,6 +65,10 @@ fun ScanDialog(target: ScanTarget, onPick: (ScannedDevice) -> Unit, onDismiss: (
                     Text(error ?: "Procurando… aproxime-se do dispositivo.", style = MaterialTheme.typography.bodyMedium,
                         color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                if (target == ScanTarget.LED) Text(
+                    "Feche o BanlanX por completo antes (o SP621E some da busca enquanto outro app está conectado). Não aparece? Toque em \"Mostrar todos\".",
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                )
                 if (target == ScanTarget.WHEEL) Text(
                     "A roda só aceita uma conexão por vez: feche o WheelLog antes, senão ela não aparecerá/conectará.",
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
