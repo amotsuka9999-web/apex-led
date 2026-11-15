@@ -53,6 +53,23 @@ class DirectBleSource(
 
     val rssi: StateFlow<Int?> get() = gatt.rssi
 
+    private val _diag = MutableStateFlow<String?>(null)
+    /** Diagnóstico para a tela: serviço BLE achado, bytes recebidos, leituras válidas e último erro. */
+    val diagnostics: StateFlow<String?> = _diag.asStateFlow()
+    @Volatile private var bytesIn = 0L
+    @Volatile private var framesOk = 0L
+    @Volatile private var lastDiagMs = 0L
+
+    private fun updateDiag(force: Boolean = false) {
+        val now = clock.nowMs()
+        if (!force && now - lastDiagMs < 500) return
+        lastDiagMs = now
+        val l = gatt.layout.value?.name ?: "—"
+        val d = decoder?.let { it::class.simpleName?.removeSuffix("Decoder") } ?: "—"
+        val err = gatt.lastError.value?.let { " · erro: $it" } ?: ""
+        _diag.value = "Serviço $l · protocolo $d · $bytesIn bytes · $framesOk leituras$err"
+    }
+
     private var jobs = emptyList<Job>()
     private val lock = Any()
     @Volatile private var decoder: WheelDecoder? = null
@@ -60,6 +77,7 @@ class DirectBleSource(
     override fun start() {
         if (jobs.isNotEmpty()) return
         decoder = null
+        bytesIn = 0; framesOk = 0
         _status.value = SourceStatus.Connecting("Conectando à roda…")
         jobs = listOf(
             scope.launch {
@@ -77,6 +95,7 @@ class DirectBleSource(
                         synchronized(lock) { decoder = l?.let(decoderFor)?.also { it.reset() } }
                     }
                     if (s == LedLinkState.RECONNECTING) synchronized(lock) { decoder?.reset() }
+                    updateDiag(force = true)
                 }
             },
             scope.launch {
@@ -86,6 +105,8 @@ class DirectBleSource(
                         d.feed(bytes, clock.nowMs()) to d.model
                     }
                     if (model != null) _model.value = model
+                    bytesIn += bytes.size; framesOk += list.size
+                    updateDiag()
                     if (list.isNotEmpty()) {
                         _telemetry.value = list.last().withBatteryFrom(profile())
                     }

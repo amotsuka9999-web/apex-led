@@ -183,6 +183,10 @@ fun HomeScreen(graph: AppGraph) {
                 Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             (srcStatus as? SourceStatus.Failed)?.let { Text(it.reason, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error) }
+            (source as? apexled.data.DirectBleSource)?.let { d ->
+                val diag by d.diagnostics.collectAsState()
+                diag?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
 
             if (!running) BigButton("Conectar / iniciar", { graph.startSource() }, Modifier.fillMaxWidth(), enabled = settings.source == SourceKind.SIMULATOR || hasPerm || settings.source == SourceKind.WHEELLOG_BRIDGE)
             else DangerButton("Parar", { graph.stopSource() }, Modifier.fillMaxWidth())
