@@ -1,5 +1,7 @@
 package apexled.app.ui.screens
 
+import androidx.compose.ui.Alignment
+import apexled.led.FanoutLedController
 import android.Manifest
 import android.content.Context
 import android.os.Build
@@ -73,6 +75,8 @@ fun HomeScreen(graph: AppGraph) {
         hasPerm = BlePermissions.hasAll(ctx)
     }
     var scan by remember { mutableStateOf<ScanTarget?>(null) }
+    var addingExtra by remember { mutableStateOf(false) }
+    val extras by graph.extraLeds.collectAsState()
 
     // Perfil automático pelo modelo que a própria roda informa (Veteran/Nosfet, Kingsong e Inmotion informam).
     LaunchedEffect(model, settings.autoDetectProfile) {
@@ -127,6 +131,17 @@ fun HomeScreen(graph: AppGraph) {
                     if (ledLink != LedLinkState.DISCONNECTED) BigButton("Desconectar", { graph.disconnectLed() }, Modifier.weight(1f), primary = false)
                     else if (settings.ledAddress != null) BigButton("Reconectar", { graph.connectLed(settings.ledAddress!!, settings.ledName) },
                         Modifier.weight(1f), primary = false, enabled = hasPerm)
+                }
+
+                // ---- grupo: até 10 fitas com a mesma configuração (como no BanlanX) ----
+                if (settings.ledAddress != null) {
+                    Text("Grupo: ${1 + extras.size} de ${FanoutLedController.MAX_DEVICES} fitas. Todas recebem os mesmos comandos.",
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    extras.forEach { e -> ExtraLedRow(e) { graph.removeExtraLed(e.address) } }
+                    if (1 + extras.size < FanoutLedController.MAX_DEVICES) BigButton("Adicionar outra fita",
+                        { addingExtra = true; scan = ScanTarget.LED }, Modifier.fillMaxWidth(), primary = false, enabled = hasPerm)
+                    if (extras.size >= 6) Text("Muitos celulares Android só mantêm ~7 conexões Bluetooth ao mesmo tempo.",
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -192,9 +207,10 @@ fun HomeScreen(graph: AppGraph) {
         graph.simulator?.let { sim -> if (source != null) SectionCard("Simulador") { SimulatorPanel(sim) } }
 
         scan?.let { target ->
-            ScanDialog(target, onDismiss = { scan = null }, onPick = { d ->
+            ScanDialog(target, onDismiss = { scan = null; addingExtra = false }, onPick = { d ->
                 scan = null
-                if (target == ScanTarget.LED) graph.connectLed(d.address, d.name)
+                if (target == ScanTarget.LED && addingExtra) { addingExtra = false; graph.addExtraLed(d.address, d.name) }
+                else if (target == ScanTarget.LED) graph.connectLed(d.address, d.name)
                 else graph.update { it.copy(wheelAddress = d.address, wheelName = d.name) }
             })
         }
@@ -240,5 +256,26 @@ private fun Tile(label: String, value: String, unit: String, modifier: Modifier 
                 Text(unit, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+    }
+}
+
+@Composable
+private fun ExtraLedRow(e: AppGraph.ExtraLed, onRemove: () -> Unit) {
+    val link by e.link.collectAsState()
+    val rssi by e.rssi.collectAsState()
+    val (t, c) = when (link) {
+        LedLinkState.CONNECTED -> "Conectada" to OkGreen
+        LedLinkState.DISCONNECTED -> "Desconectada" to BadRed
+        else -> "Conectando…" to WarnAmber
+    }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.weight(1f)) {
+            Text(e.name ?: e.address, style = MaterialTheme.typography.bodyLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                StatusPill(t, c)
+                if (link == LedLinkState.CONNECTED) rssi?.let { Text("$it dBm", style = MaterialTheme.typography.labelMedium) }
+            }
+        }
+        BigButton("Remover", onRemove, primary = false)
     }
 }

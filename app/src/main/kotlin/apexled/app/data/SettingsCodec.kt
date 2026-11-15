@@ -1,5 +1,6 @@
 package apexled.app.data
 
+import apexled.led.FanoutLedController
 import apexled.core.BatteryPoint
 import apexled.core.ColorOrder
 import apexled.core.ColorStop
@@ -38,6 +39,7 @@ object SettingsCodec {
         put("wheelName", s.wheelName ?: JSONObject.NULL)
         put("ledAddress", s.ledAddress ?: JSONObject.NULL)
         put("ledName", s.ledName ?: JSONObject.NULL)
+        put("extraLeds", JSONArray().also { a -> s.extraLeds.forEach { a.put(JSONObject().put("address", it.address).put("name", it.name ?: JSONObject.NULL)) } })
         put("ledSimulated", s.ledSimulated)
         put("theme", s.theme.name)
         put("disclaimerAccepted", s.disclaimerAccepted)
@@ -65,6 +67,11 @@ object SettingsCodec {
                 wheelName = o.optStringOrNull("wheelName"),
                 ledAddress = o.optStringOrNull("ledAddress"),
                 ledName = o.optStringOrNull("ledName"),
+                extraLeds = o.optJSONArray("extraLeds")?.let { a ->
+                    (0 until a.length()).mapNotNull { i ->
+                        a.optJSONObject(i)?.let { e -> e.optStringOrNull("address")?.let { SavedLed(it, e.optStringOrNull("name")) } }
+                    }.distinctBy { it.address }.take(FanoutLedController.MAX_DEVICES - 1)
+                } ?: emptyList(),
                 ledSimulated = o.optBoolean("ledSimulated", d.ledSimulated),
                 theme = enumOr(o.optString("theme"), d.theme),
                 disclaimerAccepted = o.optBoolean("disclaimerAccepted", false),

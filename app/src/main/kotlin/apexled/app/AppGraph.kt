@@ -27,6 +27,8 @@ import apexled.led.Sp621eController
 import apexled.safety.SafetyEngine
 import apexled.safety.SafetyOutput
 import apexled.wheel.AutoDecoder
+import apexled.led.FanoutLedController
+import apexled.app.data.SavedLed
 import apexled.wheel.InmotionV1Decoder
 import apexled.wheel.InmotionV2Decoder
 import apexled.wheel.KingsongDecoder
@@ -78,6 +80,16 @@ class AppGraph(private val context: Context) {
     val fakeLed = FakeLedController()
     private val gattLed = GattClient(context, scope, "led", alwaysWriteWithResponse = true)
     private var realLed: Sp621eController? = null
+    /** Principal + extras recebendo os mesmos comandos. */
+    private var realGroup: FanoutLedController? = null
+
+    /** Uma fita extra do grupo (cada uma com sua própria conexão BLE). */
+    class ExtraLed(val address: String, val name: String?, internal val gatt: GattClient, internal val controller: Sp621eController) {
+        val link: StateFlow<LedLinkState> get() = gatt.state
+        val rssi: StateFlow<Int?> get() = gatt.rssi
+    }
+    private val _extraLeds = MutableStateFlow<List<ExtraLed>>(emptyList())
+    val extraLeds: StateFlow<List<ExtraLed>> = _extraLeds.asStateFlow()
     private val _led = MutableStateFlow<LedController>(fakeLed)
     val led: StateFlow<LedController> = _led.asStateFlow()
 
@@ -98,6 +110,7 @@ class AppGraph(private val context: Context) {
         update { it.copy(ledSimulated = simulated) }
         if (simulated) {
             gattLed.disconnect()
+            _extraLeds.value.forEach { it.gatt.disconnect() }
             switchLed(fakeLed)
         } else {
             val addr = _settings.value.ledAddress
@@ -113,12 +126,47 @@ class AppGraph(private val context: Context) {
             realLed = it
             scope.launch { it.notices.collect { msg -> _notices.value = msg } }
         }
+        val group = realGroup ?: FanoutLedController(real) { _extraLeds.value.map { it.controller } }.also { realGroup = it }
         gattLed.connect(address)
-        switchLed(real)
+        // fitas extras salvas: conecta junto com a principal
+        _settings.value.extraLeds.forEach { e -> if (e.address != address) ensureExtra(e.address, e.name).gatt.connect(e.address) }
+        switchLed(group)
         ConnectionService.sync(context, this)
     }
 
-    fun disconnectLed() { gattLed.disconnect(); ConnectionService.sync(context, this) }
+    fun disconnectLed() {
+        gattLed.disconnect()
+        _extraLeds.value.forEach { it.gatt.disconnect() }
+        ConnectionService.sync(context, this)
+    }
+
+    /** Adiciona uma fita ao grupo (mesmos comandos da principal). Até [FanoutLedController.MAX_DEVICES] no total. */
+    fun addExtraLed(address: String, name: String?) {
+        if (!BlePermissions.hasAll(context)) { _notices.value = "Conceda a permissão de Bluetooth primeiro."; return }
+        val s = _settings.value
+        if (s.ledAddress == null || realGroup == null) { connectLed(address, name); return }
+        if (address == s.ledAddress || s.extraLeds.any { it.address == address }) { _notices.value = "Essa fita já está no grupo."; return }
+        if (s.extraLeds.size >= FanoutLedController.MAX_DEVICES - 1) {
+            _notices.value = "Limite de ${FanoutLedController.MAX_DEVICES} fitas atingido."; return
+        }
+        update { it.copy(extraLeds = it.extraLeds + SavedLed(address, name)) }
+        ensureExtra(address, name).gatt.connect(address)
+        ConnectionService.sync(context, this)
+    }
+
+    fun removeExtraLed(address: String) {
+        _extraLeds.value.firstOrNull { it.address == address }?.gatt?.disconnect()
+        _extraLeds.value = _extraLeds.value.filter { it.address != address }
+        update { it.copy(extraLeds = it.extraLeds.filter { e -> e.address != address }) }
+    }
+
+    private fun ensureExtra(address: String, name: String?): ExtraLed {
+        _extraLeds.value.firstOrNull { it.address == address }?.let { return it }
+        val gatt = GattClient(context, scope, "led-extra", alwaysWriteWithResponse = true)
+        // começa no estado atual da principal; ao conectar, o controlador envia o estado completo
+        val ctrl = Sp621eController(scope, BleLedTransport(gatt), initial = realLed?.state?.value ?: _settings.value.led, interPacketDelayMs = 120)
+        return ExtraLed(address, name, gatt, ctrl).also { _extraLeds.value = _extraLeds.value + it }
+    }
 
     private fun switchLed(target: LedController) {
         val previous = _led.value

@@ -26,6 +26,7 @@ class SettingsCodecTest {
             safety = d.safety.copy(mode = SafetyMode.BAR, stepped = true, speedLimitKmh = 42f, releaseSeconds = 3f,
                 fault = d.safety.fault.copy(style = FaultStyle.FAST_FLASH)),
             source = SourceKind.WHEELLOG_BRIDGE, wheelAddress = "AA:BB", ledAddress = "CC:DD", ledSimulated = false,
+            extraLeds = listOf(apexled.app.data.SavedLed("EE:FF", "Fita 2"), apexled.app.data.SavedLed("11:22", null)),
             theme = ThemeMode.LIGHT, disclaimerAccepted = true,
             led = d.led.copy(order = ColorOrder.GRB, pixelCount = 77, color = Rgb(9, 8, 7)),
         )
@@ -39,6 +40,7 @@ class SettingsCodecTest {
         assertEquals(FaultStyle.FAST_FLASH, back.safety.fault.style)
         assertEquals(SourceKind.WHEELLOG_BRIDGE, back.source)
         assertEquals("CC:DD", back.ledAddress)
+        assertEquals(edited.extraLeds, back.extraLeds)
         assertEquals(false, back.ledSimulated)
         assertEquals(ThemeMode.LIGHT, back.theme)
         assertEquals(ColorOrder.GRB, back.led.order)

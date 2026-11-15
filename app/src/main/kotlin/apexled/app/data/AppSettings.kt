@@ -19,6 +19,8 @@ data class AppSettings(
     val wheelName: String? = null,
     val ledAddress: String? = null,
     val ledName: String? = null,
+    /** Fitas extras que recebem os mesmos comandos da principal (até 9; 10 no total, como o BanlanX). */
+    val extraLeds: List<SavedLed> = emptyList(),
     /** true = usa o controlador simulado (sem Bluetooth); false = SP621E real. */
     val ledSimulated: Boolean = true,
     val theme: ThemeMode = ThemeMode.DARK,
@@ -28,3 +30,5 @@ data class AppSettings(
     val activeProfile: WheelProfile
         get() = profiles.firstOrNull { it.id == activeProfileId } ?: profiles.first()
 }
+
+data class SavedLed(val address: String, val name: String?)
