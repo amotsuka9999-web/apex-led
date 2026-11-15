@@ -24,3 +24,5 @@ include(":safety-engine")
 // Módulos Android.
 include(":data-source")
 include(":app")
+// App do relógio (Wear OS / Galaxy Watch): controle remoto do app do celular.
+include(":wear")

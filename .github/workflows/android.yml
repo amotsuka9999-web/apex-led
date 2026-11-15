@@ -30,10 +30,13 @@ jobs:
         run: |
           ./gradlew assembleDebug
           cp app/build/outputs/apk/debug/app-debug.apk apex-led.apk
+          cp wear/build/outputs/apk/debug/wear-debug.apk apex-led-relogio.apk
       - uses: actions/upload-artifact@v6
         with:
           name: apex-led-debug-apk
-          path: apex-led.apk
+          path: |
+            apex-led.apk
+            apex-led-relogio.apk
 
       # Publica o APK num link fixo, que abre direto no celular (sem zip e sem login):
       # https://github.com/amotsuka9999-web/apex-led/releases/latest/download/apex-led.apk
@@ -43,8 +46,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest apex-led.apk \
+          gh release create latest apex-led.apk apex-led-relogio.apk \
             --target "$GITHUB_SHA" \
             --title "Apex LED v0.1.${GITHUB_RUN_NUMBER}" \
-            --notes "Build automático do commit ${GITHUB_SHA::7} (branch ${GITHUB_REF_NAME}). Baixe apex-led.apk no celular e toque para instalar." \
+            --notes "Build automático do commit ${GITHUB_SHA::7} (branch ${GITHUB_REF_NAME}). apex-led.apk = celular; apex-led-relogio.apk = Galaxy Watch / Wear OS (instalar pelo celular, ver README)." \
             --latest

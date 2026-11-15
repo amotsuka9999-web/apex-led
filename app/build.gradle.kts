@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.datastore)
     implementation(libs.coroutines.android)
+    implementation(libs.play.services.wearable)
 
     testImplementation(libs.kotlin.test)
     testImplementation("org.json:json:20240303")
