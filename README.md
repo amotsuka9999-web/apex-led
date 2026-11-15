@@ -33,6 +33,30 @@ Tudo que depende de hardware está em [docs/testes-em-campo.md](docs/testes-em-c
 
 O link sempre aponta para o último build da `main` (ou de uma branch `claude/*`). Não precisa de login no GitHub.
 
+## Relógio (Galaxy Watch / Wear OS)
+
+O app do relógio é um controle remoto do app do celular. Ele tem 3 páginas, que você passa deslizando:
+1. **Modo seguro:** liga/desliga e mostra velocidade, PWM e bateria, com a cor da fita em volta. Vibra quando a margem se esgota.
+2. **Cores fixas:** 8 cores e OFF.
+3. **Modos:** 6 efeitos prontos.
+
+Escolher uma cor ou um modo pausa a segurança; ligue o modo seguro de novo na página 1.
+
+**Instalar** (o relógio precisa do app do celular instalado, na mesma versão):
+1. No relógio, abra **Configurações → Sobre o relógio → Software** e toque 5 vezes em **Versão do software** para liberar as Opções do desenvolvedor.
+2. Em **Configurações → Opções do desenvolvedor**, ative **Depuração ADB** e **Depuração por Wi-Fi** (celular e relógio na mesma rede Wi-Fi).
+3. No celular, baixe o APK do relógio: **https://github.com/amotsuka9999-web/apex-led/releases/latest/download/apex-led-relogio.apk**
+4. Instale no relógio com um app de instalação por ADB no celular (por exemplo, *Wear Installer 2* ou *Bugjaeger*): toque em **Parear novo dispositivo** no relógio, digite o código no app do celular e escolha o `apex-led-relogio.apk`.
+
+## Rodas suportadas
+
+Conexão direta por BLE, com o protocolo detectado sozinho (perfil "Automático") ou escolhido no perfil:
+- **Begode/Gotway** e **Leaperkim/Veteran** (Sherman, Abrams, Patton, Lynx, Oryx), **Nosfet** (Apex, Aero, Aeon)
+- **Kingsong** (pede o nome à roda para saber o pack)
+- **Inmotion V5/V8/V10** (senha padrão 000000; PWM estimado) e **Inmotion V9/V11/V11y/V12/V12S/V13/V14**
+
+Os formatos vêm do WheelLog e foram testados com frames reais dos testes dele, mas **nenhuma roda foi conectada de verdade por este projeto ainda**. Teste parado antes de andar.
+
 ## Como compilar e instalar
 
 Requisitos: JDK 21 e Android SDK (plataforma 35). Crie `local.properties` com `sdk.dir=/caminho/do/sdk` (ou defina `ANDROID_HOME`).
