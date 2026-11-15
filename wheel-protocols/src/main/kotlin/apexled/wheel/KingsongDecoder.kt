@@ -6,7 +6,8 @@ import kotlin.math.abs
 /**
  * Protocolo Kingsong (BLE UART, serviço FFE0 / característica FFE1). Também usado pelas Rockwheel.
  *
- * Frame de 20 bytes: `AA 55 <14 bytes de dados> <tipo> <0x14> 5A 5A`. Inteiros little-endian.
+ * Frame de 20 bytes: `AA 55 <14 bytes de dados> <tipo> <0x14> 5A 5A` (nome/série usam o rodapé para
+ * dados). Inteiros little-endian.
  *  - Tipo 0xA9 (ao vivo): [2..3] tensão u16 0,01 V; [4..5] velocidade s16 0,01 km/h;
  *    [10..11] corrente s16 0,01 A; [12..13] temperatura s16 0,01 °C.
  *  - Tipo 0xF5: [15] PWM ("output") em % (0..100).
@@ -37,13 +38,10 @@ class KingsongDecoder : WheelDecoder {
             }
             if (start > 0) buffer.dropFirst(start)
             if (buffer.size < FRAME_LEN) break
+            // Sem checar o rodapé: os frames de nome/série (0xBB/0xB3) usam os bytes 17..19 para dados.
             val f = ByteArray(FRAME_LEN) { buffer[it] }
-            if (f[18] == 0x5A.toByte() && f[19] == 0x5A.toByte()) {
-                buffer.dropFirst(FRAME_LEN)
-                decode(f, nowMs)?.let { out += it }
-            } else {
-                buffer.dropFirst(1)
-            }
+            buffer.dropFirst(FRAME_LEN)
+            decode(f, nowMs)?.let { out += it }
         }
         return out
     }
