@@ -66,8 +66,13 @@ class SettingsCodecTest {
 
     @Test fun profileModelsKeepDefaultsForMissingFields() {
         val s = SettingsCodec.decode("""{"profiles":[{"id":"x","name":"Minha","model":"CUSTOM"}]}""")
-        assertEquals("Minha", s.profiles.single().name)
-        assertEquals(WheelModel.CUSTOM, s.profiles.single().model)
-        assertTrue(s.profiles.single().pwmStops.size >= 2)
+        val p = s.profiles.first { it.id == "x" }
+        assertEquals("Minha", p.name)
+        assertEquals(WheelModel.CUSTOM, p.model)
+        assertEquals(apexled.core.WheelProtocol.AUTO, p.protocol)
+        assertTrue(p.pwmStops.size >= 2)
+        // perfis pré-cadastrados que faltavam entram depois dos salvos
+        assertTrue(s.profiles.any { it.model == WheelModel.KINGSONG })
+        assertTrue(s.profiles.any { it.model == WheelModel.INMOTION_V2 })
     }
 }

@@ -19,7 +19,7 @@ data class ScannedDevice(
     val rssi: Int,
     /** Dados de fabricante com o ID 0x5053 ("SP") ou nome SP6xx: provável controlador BanlanX. */
     val looksLikeSpLed: Boolean,
-    /** Anuncia o serviço FFE0 (comum a rodas e controladores). */
+    /** Anuncia o serviço FFE0 ou o Nordic UART (Inmotion): provável roda. */
     val hasFfe0: Boolean,
     val lastSeenMs: Long,
 )
@@ -55,7 +55,7 @@ class BleScanner(private val context: Context) {
         val record = scanRecord
         val name = record?.deviceName ?: runCatching { device.name }.getOrNull()
         val sp = record?.getManufacturerSpecificData(0x5053) != null || name?.startsWith("SP6", ignoreCase = true) == true
-        val ffe0 = record?.serviceUuids?.any { it.uuid == GattClient.FFE0 } == true
+        val ffe0 = record?.serviceUuids?.any { it.uuid == GattClient.FFE0 || it.uuid == GattLayout.INMOTION_V2.service } == true
         return ScannedDevice(device.address, name, rssi, sp, ffe0, System.currentTimeMillis())
     }
 }

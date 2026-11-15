@@ -23,10 +23,44 @@ data class PwmCalibration(
 /** Degrau da escala de cores. [at] é a fração de uso (0..1) em que a cor é atingida. */
 data class ColorStop(val at: Float, val color: Rgb)
 
-enum class WheelModel(val displayName: String) {
-    NOSFET_APEX("Nosfet Apex"),
-    BEGODE_A2("Begode A2"),
-    CUSTOM("Personalizada"),
+/** Protocolo BLE da roda. [AUTO] escolhe pelo serviço BLE encontrado e pelo formato dos frames. */
+enum class WheelProtocol(val label: String) {
+    AUTO("Automático"),
+    GOTWAY("Begode/Gotway"),
+    VETERAN("Leaperkim/Veteran/Nosfet"),
+    KINGSONG("Kingsong"),
+    INMOTION_V1("Inmotion V5/V8/V10"),
+    INMOTION_V2("Inmotion V9/V11–V14/P6"),
+}
+
+/**
+ * Modelos pré-cadastrados. [detects] são os nomes que o protocolo informa (Veteran: versão do firmware;
+ * Kingsong: nome "KS-…"; Inmotion: tipo do carro) e escolhem o perfil sozinhos; "*" no fim = prefixo.
+ * Tensões dos packs: tabelas de bateria do WheelLog (VeteranAdapter, KingsongAdapter, InMotionAdapter).
+ */
+enum class WheelModel(val displayName: String, val protocol: WheelProtocol, val detects: List<String> = emptyList()) {
+    NOSFET_APEX("Nosfet Apex", WheelProtocol.VETERAN, listOf("Nosfet Apex")),
+    NOSFET_AERO("Nosfet Aero", WheelProtocol.VETERAN, listOf("Nosfet Aero")),
+    NOSFET_AEON("Nosfet Aeon", WheelProtocol.VETERAN, listOf("Nosfet Aeon")),
+    LEAPERKIM_24S("Leaperkim Sherman/Abrams (100 V)", WheelProtocol.VETERAN, listOf("Sherman", "Abrams", "Sherman S")),
+    LEAPERKIM_30S("Leaperkim Patton (126 V)", WheelProtocol.VETERAN, listOf("Patton", "Patton S")),
+    LEAPERKIM_36S("Leaperkim Lynx/Sherman L (151 V)", WheelProtocol.VETERAN, listOf("Lynx", "Lynx S", "Sherman L")),
+    LEAPERKIM_42S("Leaperkim Oryx (176 V)", WheelProtocol.VETERAN, listOf("Oryx")),
+    BEGODE_A2("Begode A2", WheelProtocol.GOTWAY),
+    BEGODE_100V("Begode 100 V", WheelProtocol.GOTWAY),
+    BEGODE_134V("Begode 134 V", WheelProtocol.GOTWAY),
+    BEGODE_151V("Begode 151 V", WheelProtocol.GOTWAY),
+    BEGODE_168V("Begode 168 V", WheelProtocol.GOTWAY),
+    KINGSONG("Kingsong", WheelProtocol.KINGSONG, listOf("KS-*")),
+    INMOTION_V1("Inmotion V5/V8/V10", WheelProtocol.INMOTION_V1, listOf("Inmotion V5*", "Inmotion V8*", "Inmotion V10*", "Inmotion Glide*")),
+    INMOTION_V2("Inmotion V9/V11–V14", WheelProtocol.INMOTION_V2, listOf("Inmotion V*")),
+    CUSTOM("Personalizada", WheelProtocol.AUTO),
+    ;
+
+    /** O nome informado pela roda corresponde a este modelo? ("*" no fim = prefixo.) */
+    fun matches(reported: String): Boolean = detects.any { d ->
+        if (d.endsWith("*")) reported.startsWith(d.dropLast(1), ignoreCase = true) else reported.equals(d, ignoreCase = true)
+    }
 }
 
 /**
@@ -49,6 +83,8 @@ data class WheelProfile(
     val pwmCalibration: PwmCalibration,
     /** Escala de cores por PWM (fração 0..1). */
     val pwmStops: List<ColorStop> = DefaultStops.pwm,
+    /** Protocolo usado ao conectar; [WheelProtocol.AUTO] detecta sozinho. */
+    val protocol: WheelProtocol = model.protocol,
     /** PWM a partir do qual o alerta passa a piscar (fração). */
     val flashAbovePwm: Float = 0.90f,
     /** Bateria (%) abaixo da qual o fator de bateria começa a pesar. */
@@ -105,7 +141,42 @@ data class WheelProfile(
             pwmCalibration = PwmCalibration(rotationSpeedKmh = 50f, rotationVoltage = 84f, powerFactor = 0.90f),
         )
 
-        fun all() = listOf(nosfetApex(), begodeA2())
+        /** Perfil genérico a partir do pack (S = células em série; 4,2 V cheia, ~3,3 V vazia por célula). */
+        private fun pack(
+            model: WheelModel, cells: Int, maxSpeed: Float, rotationKmh: Float, id: String = model.name.lowercase().replace('_', '-'),
+        ) = WheelProfile(
+            id = id, name = model.displayName, model = model,
+            maxSpeedKmh = maxSpeed, tiltbackSpeedKmh = 0f,
+            nominalVoltage = cells * 3.7f, fullVoltage = cells * 4.2f, emptyVoltage = cells * 3.3f,
+            pwmCalibration = PwmCalibration(rotationSpeedKmh = rotationKmh, rotationVoltage = cells * 4.2f, powerFactor = 0.90f),
+        )
+
+        /**
+         * Valores de partida: velocidade máxima e calibração de PWM são estimativas para o tamanho do pack, só
+         * usadas quando a roda não informa PWM (Begode de fábrica e Inmotion V5/V8/V10). Ajuste à sua roda.
+         */
+        fun presets(): List<WheelProfile> = listOf(
+            nosfetApex(),
+            pack(WheelModel.NOSFET_AERO, 30, 80f, 90f),
+            pack(WheelModel.NOSFET_AEON, 36, 90f, 100f),
+            pack(WheelModel.LEAPERKIM_24S, 24, 70f, 80f),
+            pack(WheelModel.LEAPERKIM_30S, 30, 80f, 90f),
+            pack(WheelModel.LEAPERKIM_36S, 36, 90f, 100f),
+            pack(WheelModel.LEAPERKIM_42S, 42, 100f, 115f),
+            begodeA2(),
+            pack(WheelModel.BEGODE_100V, 24, 70f, 80f),
+            pack(WheelModel.BEGODE_134V, 32, 80f, 95f),
+            pack(WheelModel.BEGODE_151V, 36, 90f, 105f),
+            pack(WheelModel.BEGODE_168V, 40, 100f, 115f),
+            pack(WheelModel.KINGSONG, 20, 50f, 60f),
+            pack(WheelModel.INMOTION_V1, 20, 45f, 55f),
+            pack(WheelModel.INMOTION_V2, 30, 80f, 90f),
+        )
+
+        fun forModel(model: WheelModel): WheelProfile =
+            presets().firstOrNull { it.model == model } ?: begodeA2().copy(model = WheelModel.CUSTOM, protocol = WheelProtocol.AUTO)
+
+        fun all() = presets()
     }
 }
 

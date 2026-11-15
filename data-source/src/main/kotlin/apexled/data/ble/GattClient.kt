@@ -64,19 +64,23 @@ class GattClient(
 
     private var gatt: BluetoothGatt? = null
     private var characteristic: BluetoothGattCharacteristic? = null
+    private var writeCharacteristic: BluetoothGattCharacteristic? = null
     private var wanted = false
     private var address: String? = null
-    private var serviceUuid: UUID = FFE0
-    private var charUuid: UUID = FFE1
+    private var layouts: List<GattLayout> = listOf(GattLayout.UART)
+
+    private val _layout = MutableStateFlow<GattLayout?>(null)
+    /** Layout de serviços encontrado na última conexão (define o protocolo da roda). */
+    val layout: StateFlow<GattLayout?> = _layout.asStateFlow()
     private var reconnectJob: Job? = null
     private var attempt = 0
     private val writeMutex = Mutex()
     private var pendingWrite: CompletableDeferred<Boolean>? = null
 
-    fun connect(address: String, serviceUuid: UUID = FFE0, charUuid: UUID = FFE1) {
+    /** Conecta e usa o primeiro layout de [layouts] que existir no aparelho. */
+    fun connect(address: String, layouts: List<GattLayout> = listOf(GattLayout.UART)) {
         this.address = address
-        this.serviceUuid = serviceUuid
-        this.charUuid = charUuid
+        this.layouts = layouts
         wanted = true
         attempt = 0
         openGatt()
@@ -114,6 +118,7 @@ class GattClient(
 
     private fun closeGatt() {
         characteristic = null
+        writeCharacteristic = null
         gatt?.let { g -> runCatching { g.disconnect() }; runCatching { g.close() } }
         gatt = null
         pendingWrite?.complete(false)
@@ -138,6 +143,7 @@ class GattClient(
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED || status != BluetoothGatt.GATT_SUCCESS) {
                 _lastError.value = if (status != 0) "GATT status $status" else null
                 characteristic = null
+                writeCharacteristic = null
                 runCatching { g.close() }
                 if (gatt === g) gatt = null
                 pendingWrite?.complete(false)
@@ -146,13 +152,21 @@ class GattClient(
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
-            val ch = g.getService(serviceUuid)?.getCharacteristic(charUuid)
-            if (status != BluetoothGatt.GATT_SUCCESS || ch == null) {
-                _lastError.value = "Serviço $serviceUuid / característica $charUuid não encontrados"
+            var found: Triple<GattLayout, BluetoothGattCharacteristic, BluetoothGattCharacteristic>? = null
+            if (status == BluetoothGatt.GATT_SUCCESS) for (l in layouts) {
+                val n = g.getService(l.service)?.getCharacteristic(l.notify) ?: continue
+                val w = g.getService(l.writeService)?.getCharacteristic(l.write) ?: continue
+                found = Triple(l, n, w); break
+            }
+            if (found == null) {
+                _lastError.value = "Serviço BLE esperado não encontrado (${layouts.joinToString { it.name }})"
                 runCatching { g.disconnect() }
                 return
             }
+            val (l, ch, w) = found
+            _layout.value = l
             characteristic = ch
+            writeCharacteristic = w
             g.setCharacteristicNotification(ch, true)
             val cccd = ch.getDescriptor(CCCD)
             if (cccd == null) { markReady(); return }
@@ -199,7 +213,7 @@ class GattClient(
      */
     suspend fun write(data: ByteArray): Boolean = writeMutex.withLock {
         val g = gatt ?: return false
-        val ch = characteristic ?: return false
+        val ch = writeCharacteristic ?: return false
         if (_state.value != LedLinkState.CONNECTED) return false
         val canWrite = ch.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0
         val noResponse = (!alwaysWriteWithResponse || !canWrite) &&
@@ -220,5 +234,35 @@ class GattClient(
         val FFE0: UUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb")
         val FFE1: UUID = UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb")
         private val CCCD: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+    }
+}
+
+/**
+ * Onde ficam as características de leitura (notificação) e escrita de um aparelho.
+ * Fontes dos UUIDs: WheelLog, utils/Constants.kt.
+ */
+data class GattLayout(
+    val name: String,
+    val service: UUID,
+    val notify: UUID,
+    val writeService: UUID = service,
+    val write: UUID = notify,
+) {
+    companion object {
+        private fun u(s: String) = UUID.fromString(s)
+        /** UART FFE0/FFE1: Begode/Gotway, Leaperkim/Veteran, Nosfet, Kingsong e o SP621E. */
+        val UART = GattLayout("FFE0/FFE1", u("0000ffe0-0000-1000-8000-00805f9b34fb"), u("0000ffe1-0000-1000-8000-00805f9b34fb"))
+        /** Inmotion V5/V8/V10 (protocolo CAN): lê FFE0/FFE4 e escreve FFE5/FFE9. */
+        val INMOTION_V1 = GattLayout(
+            "Inmotion V1", u("0000ffe0-0000-1000-8000-00805f9b34fb"), u("0000ffe4-0000-1000-8000-00805f9b34fb"),
+            u("0000ffe5-0000-1000-8000-00805f9b34fb"), u("0000ffe9-0000-1000-8000-00805f9b34fb"),
+        )
+        /** Inmotion V9/V11/V12/V13/V14/P6 (Nordic UART). */
+        val INMOTION_V2 = GattLayout(
+            "Inmotion V2", u("6e400001-b5a3-f393-e0a9-e50e24dcca9e"), u("6e400003-b5a3-f393-e0a9-e50e24dcca9e"),
+            write = u("6e400002-b5a3-f393-e0a9-e50e24dcca9e"),
+        )
+        /** Ordem de detecção para rodas: os mais específicos primeiro. */
+        val WHEELS = listOf(INMOTION_V2, INMOTION_V1, UART)
     }
 }

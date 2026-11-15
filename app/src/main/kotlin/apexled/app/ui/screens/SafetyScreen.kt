@@ -43,6 +43,7 @@ import apexled.core.DefaultStops
 import apexled.core.PwmCalibration
 import apexled.core.Rgb
 import apexled.core.WheelModel
+import apexled.core.WheelProtocol
 import apexled.core.WheelProfile
 import apexled.safety.FaultStyle
 import apexled.safety.SafetyConfig
@@ -213,6 +214,10 @@ private fun StopRow(stop: ColorStop, onChange: (ColorStop) -> Unit, onDelete: ((
 @Composable
 private fun ProfileEditor(profile: WheelProfile, update: ((WheelProfile) -> WheelProfile) -> Unit, graph: AppGraph) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Protocolo da roda", style = MaterialTheme.typography.titleMedium)
+        ChipRow(WheelProtocol.entries, profile.protocol, { it.label }, { pr -> update { it.copy(protocol = pr) } })
+        Text("Reconecte a roda depois de trocar. \"Automático\" reconhece Begode, Leaperkim/Nosfet, Kingsong e Inmotion.",
+            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text("Velocidade", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             NumberField("Máxima", profile.maxSpeedKmh, { v -> update { it.copy(maxSpeedKmh = v.coerceAtLeast(5f)) } }, Modifier.weight(1f), 0, "km/h")
@@ -251,8 +256,7 @@ private fun ProfileEditor(profile: WheelProfile, update: ((WheelProfile) -> Whee
             }, Modifier.weight(1f), primary = false)
         }
         if (profile.model != WheelModel.CUSTOM) BigButton("Restaurar valores iniciais", {
-            val def = if (profile.model == WheelModel.NOSFET_APEX) WheelProfile.nosfetApex() else WheelProfile.begodeA2()
-            update { def }
+            update { WheelProfile.forModel(profile.model) }
         }, Modifier.fillMaxWidth(), primary = false)
     }
 }

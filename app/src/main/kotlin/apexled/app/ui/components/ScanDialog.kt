@@ -70,7 +70,7 @@ fun ScanDialog(target: ScanTarget, onPick: (ScannedDevice) -> Unit, onDismiss: (
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
                 )
                 if (target == ScanTarget.WHEEL) Text(
-                    "A roda só aceita uma conexão por vez: feche o WheelLog antes, senão ela não aparecerá/conectará.",
+                    "A roda só aceita uma conexão por vez: feche o WheelLog e o app da marca (Begode, Leaperkim, Kingsong, Inmotion) antes, senão ela não aparecerá/conectará.",
                     style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
                 )
                 LazyColumn(Modifier.heightIn(max = 360.dp)) {

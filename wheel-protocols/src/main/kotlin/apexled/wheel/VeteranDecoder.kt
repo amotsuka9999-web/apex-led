@@ -121,13 +121,28 @@ class VeteranDecoder(private val config: VeteranConfig = VeteranConfig()) : Whee
             voltage = voltage,
             // Mesma aproximação do WheelLog (calculateCurrent): corrente de bateria ≈ PWM × corrente de fase.
             currentA = pwm?.let { it * phaseA },
-            batteryPercent = null,
+            batteryPercent = batteryPercent(protocolVersion, voltage),
             temperatureC = tempC,
             pwmEstimated = !useHw,
         )
     }
 
     companion object {
+        /**
+         * Percentual "padrão" do WheelLog (VeteranAdapter) pela versão: 24S (Sherman/Abrams), 30S (Patton,
+         * Nosfet Aero), 36S (Lynx, Sherman L, Nosfet Apex/Aeon), 42S (Oryx). null = modelo novo/desconhecido.
+         */
+        fun batteryPercent(ver: Int, voltage: Float): Float? {
+            val (empty, step) = when (ver) {
+                0, 1, 2, 3 -> 79.35f to 0.195f
+                4, 7, 43 -> 99.18f to 0.242f
+                5, 6, 9, 42, 44 -> 119.02f to 0.2903f
+                8 -> 138.86f to 0.34125f
+                else -> return null
+            }
+            return ((voltage - empty) / step).coerceIn(0f, 100f)
+        }
+
         private const val MAX_BUFFER = 1024
         private const val MIN_LEN = 32
         private const val GAP_RESET_MS = 250L

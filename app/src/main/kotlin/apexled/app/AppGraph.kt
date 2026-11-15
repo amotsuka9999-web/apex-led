@@ -27,6 +27,11 @@ import apexled.led.Sp621eController
 import apexled.safety.SafetyEngine
 import apexled.safety.SafetyOutput
 import apexled.wheel.AutoDecoder
+import apexled.wheel.InmotionV1Decoder
+import apexled.wheel.InmotionV2Decoder
+import apexled.wheel.KingsongDecoder
+import apexled.data.ble.GattLayout
+import apexled.core.WheelProtocol
 import apexled.wheel.GotwayConfig
 import apexled.wheel.GotwayDecoder
 import apexled.wheel.VeteranConfig
@@ -163,7 +168,7 @@ class AppGraph(private val context: Context) {
                 val addr = s.wheelAddress
                 if (addr == null) { _notices.value = "Escolha a roda na lista antes de conectar."; null }
                 else if (!BlePermissions.hasAll(context)) { _notices.value = "Conceda a permissão de Bluetooth primeiro."; null }
-                else DirectBleSource(context, scope, addr, decoderFor(s.activeProfile), profile, clock)
+                else DirectBleSource(context, scope, addr, layoutsFor(s.activeProfile), { l -> decoderFor(s.activeProfile, l) }, profile, clock)
             }
             SourceKind.WHEELLOG_BRIDGE -> WheelLogBridgeSource(context, clock)
         }
@@ -180,13 +185,29 @@ class AppGraph(private val context: Context) {
         ConnectionService.sync(context, this)
     }
 
-    private fun decoderFor(p: WheelProfile): WheelDecoder = when (p.model) {
-        WheelModel.NOSFET_APEX -> VeteranDecoder(VeteranConfig(calibration = p.pwmCalibration))
-        WheelModel.BEGODE_A2 -> GotwayDecoder(GotwayConfig(calibration = p.pwmCalibration))
-        WheelModel.CUSTOM -> AutoDecoder(
-            GotwayDecoder(GotwayConfig(calibration = p.pwmCalibration)),
-            VeteranDecoder(VeteranConfig(calibration = p.pwmCalibration)),
-        )
+    private fun layoutsFor(p: WheelProfile): List<GattLayout> = when (p.protocol) {
+        WheelProtocol.AUTO -> GattLayout.WHEELS
+        WheelProtocol.INMOTION_V1 -> listOf(GattLayout.INMOTION_V1)
+        WheelProtocol.INMOTION_V2 -> listOf(GattLayout.INMOTION_V2)
+        else -> listOf(GattLayout.UART)
+    }
+
+    /** Begode envia a tensão como se o pack fosse 16S (67,2 V): escala pelo pack do perfil, como no WheelLog. */
+    private fun gotwayScale(p: WheelProfile) = if (p.fullVoltage > 70f) p.fullVoltage / 67.2f else 1f
+
+    private fun decoderFor(p: WheelProfile, layout: GattLayout): WheelDecoder {
+        val gotway = { GotwayDecoder(GotwayConfig(voltageScale = gotwayScale(p), calibration = p.pwmCalibration)) }
+        val veteran = { VeteranDecoder(VeteranConfig(calibration = p.pwmCalibration)) }
+        return when (layout) {
+            GattLayout.INMOTION_V2 -> InmotionV2Decoder()
+            GattLayout.INMOTION_V1 -> InmotionV1Decoder(calibration = p.pwmCalibration)
+            else -> when (p.protocol) {
+                WheelProtocol.GOTWAY -> gotway()
+                WheelProtocol.VETERAN -> veteran()
+                WheelProtocol.KINGSONG -> KingsongDecoder()
+                else -> AutoDecoder(gotway(), veteran(), KingsongDecoder())
+            }
+        }
     }
 
     /** Há algo conectado que exige manter o processo vivo? (usado pelo serviço em primeiro plano) */

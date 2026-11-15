@@ -51,7 +51,10 @@ object SettingsCodec {
             val d = AppSettings()
             val profiles = o.optJSONArray("profiles")?.let { a ->
                 (0 until a.length()).mapNotNull { runCatching { profile(a.getJSONObject(it)) }.getOrNull() }
-            }?.takeIf { it.isNotEmpty() } ?: d.profiles
+            }?.takeIf { it.isNotEmpty() }
+                // perfis pré-cadastrados novos (versões mais novas do app) entram no fim da lista
+                ?.let { saved -> saved + d.profiles.filter { p -> saved.none { it.id == p.id } } }
+                ?: d.profiles
             AppSettings(
                 profiles = profiles,
                 activeProfileId = o.optString("activeProfileId", d.activeProfileId),
@@ -84,7 +87,7 @@ object SettingsCodec {
     } catch (e: Exception) { d }
 
     private fun profile(p: WheelProfile) = JSONObject().apply {
-        put("id", p.id); put("name", p.name); put("model", p.model.name)
+        put("id", p.id); put("name", p.name); put("model", p.model.name); put("protocol", p.protocol.name)
         put("maxSpeedKmh", p.maxSpeedKmh.toDouble()); put("tiltbackSpeedKmh", p.tiltbackSpeedKmh.toDouble())
         put("nominalVoltage", p.nominalVoltage.toDouble()); put("fullVoltage", p.fullVoltage.toDouble())
         put("emptyVoltage", p.emptyVoltage.toDouble())
@@ -100,11 +103,7 @@ object SettingsCodec {
 
     private fun profile(o: JSONObject): WheelProfile {
         val model = enumOr(o.optString("model"), WheelModel.CUSTOM)
-        val base = when (model) {
-            WheelModel.NOSFET_APEX -> WheelProfile.nosfetApex()
-            WheelModel.BEGODE_A2 -> WheelProfile.begodeA2()
-            WheelModel.CUSTOM -> WheelProfile.begodeA2().copy(model = WheelModel.CUSTOM)
-        }
+        val base = WheelProfile.forModel(model)
         fun f(k: String, d: Float) = if (o.has(k)) o.optDouble(k, d.toDouble()).toFloat() else d
         val stops = o.optJSONArray("stops")?.let { a ->
             (0 until a.length()).mapNotNull {
@@ -118,6 +117,7 @@ object SettingsCodec {
             id = o.optString("id", base.id).ifBlank { base.id },
             name = o.optString("name", base.name).ifBlank { base.name },
             model = model,
+            protocol = enumOr(o.optString("protocol"), base.protocol),
             maxSpeedKmh = f("maxSpeedKmh", base.maxSpeedKmh).coerceAtLeast(1f),
             tiltbackSpeedKmh = f("tiltbackSpeedKmh", base.tiltbackSpeedKmh).coerceAtLeast(0f),
             nominalVoltage = f("nominalVoltage", base.nominalVoltage),

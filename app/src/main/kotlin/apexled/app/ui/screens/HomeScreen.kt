@@ -74,11 +74,11 @@ fun HomeScreen(graph: AppGraph) {
     }
     var scan by remember { mutableStateOf<ScanTarget?>(null) }
 
-    // Perfil automático pelo modelo que a própria roda informa (só o protocolo Veteran informa).
+    // Perfil automático pelo modelo que a própria roda informa (Veteran/Nosfet, Kingsong e Inmotion informam).
     LaunchedEffect(model, settings.autoDetectProfile) {
         val m = model ?: return@LaunchedEffect
         if (!settings.autoDetectProfile) return@LaunchedEffect
-        settings.profiles.firstOrNull { it.model.displayName.equals(m, true) || it.name.equals(m, true) }
+        (settings.profiles.firstOrNull { it.name.equals(m, true) } ?: settings.profiles.firstOrNull { it.model.matches(m) })
             ?.let { p -> if (p.id != settings.activeProfileId) graph.update { it.copy(activeProfileId = p.id) } }
     }
 
