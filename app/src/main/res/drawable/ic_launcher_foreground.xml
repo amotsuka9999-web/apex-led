@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Arco de LED (verde → amarelo → vermelho) em volta de uma roda estilizada. Área segura: círculo de 66dp no centro. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:strokeColor="#00DC3C" android:strokeWidth="7" android:strokeLineCap="round"
+        android:pathData="M33,71 A26,26 0 0 1 30,50" />
+    <path android:strokeColor="#A0DC00" android:strokeWidth="7" android:strokeLineCap="round"
+        android:pathData="M31,44 A26,26 0 0 1 43,31" />
+    <path android:strokeColor="#FFD200" android:strokeWidth="7" android:strokeLineCap="round"
+        android:pathData="M50,29 A26,26 0 0 1 66,30" />
+    <path android:strokeColor="#FF6E00" android:strokeWidth="7" android:strokeLineCap="round"
+        android:pathData="M73,34 A26,26 0 0 1 80,48" />
+    <path android:strokeColor="#FF0000" android:strokeWidth="7" android:strokeLineCap="round"
+        android:pathData="M81,56 A26,26 0 0 1 75,70" />
+    <path android:fillColor="#E6EDF3" android:pathData="M56,40 L46,56 L53,56 L50,68 L62,50 L55,50 Z" />
+</vector>

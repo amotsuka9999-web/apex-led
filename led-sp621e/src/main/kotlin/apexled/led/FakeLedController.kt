@@ -46,7 +46,7 @@ class FakeLedController(initial: LedState = LedState(), private val maxLog: Int 
     override fun applyFrame(frame: LedFrame) {
         val level = frame.brightness.coerceIn(0, 255) / 255f
         val s = _state.value.copy(
-            power = true, effectId = LedState.EFFECT_SOLID, color = frame.color.scaled(level), brightness = 255, bar = frame.bar,
+            power = true, effectId = LedState.EFFECT_SOLID, color = frame.color.scaled(level), brightness = 255, bar = frame.bar, barBrightness = frame.brightness,
         )
         _state.value = s
         logPackets(s)

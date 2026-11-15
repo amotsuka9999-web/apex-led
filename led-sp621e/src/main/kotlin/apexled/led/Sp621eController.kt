@@ -102,7 +102,8 @@ class Sp621eController(
     /** Avisos para a UI, ex.: comandos ainda sem protocolo conhecido. */
     val notices: SharedFlow<String> = _notices
 
-    private var mirror = DeviceMirror()
+    @Volatile private var mirror = DeviceMirror()
+    @Volatile private var resyncRequested = false
     private val oneShots = ArrayDeque<ByteArray>()
     private val wake = Channel<Unit>(Channel.CONFLATED)
     private val parser = Sp621eStatusParser()
@@ -114,7 +115,7 @@ class Sp621eController(
         scope.launch {
             transport.link.collect { s ->
                 if (s == LedLinkState.CONNECTED) {
-                    synchronized(this@Sp621eController) { mirror = DeviceMirror() }
+                    resyncRequested = true
                     parser.reset()
                     synchronized(this@Sp621eController) { oneShots.addLast(Sp621ePackets.stateQuery()) }
                     wake.trySend(Unit)
@@ -173,6 +174,7 @@ class Sp621eController(
             color = frame.color.scaled(level),
             brightness = 255,
             bar = frame.bar,
+            barBrightness = frame.brightness,
         )
         wake.trySend(Unit)
     }
@@ -180,6 +182,7 @@ class Sp621eController(
     private fun enqueueOneShot(p: ByteArray) = synchronized(this) { oneShots.addLast(p) }
 
     private suspend fun flush() {
+        if (resyncRequested) { resyncRequested = false; mirror = DeviceMirror() }
         val shots = synchronized(this) { val l = oneShots.toList(); oneShots.clear(); l }
         val (planned, newMirror) = planPackets(mirror, _state.value)
         val all = shots + planned

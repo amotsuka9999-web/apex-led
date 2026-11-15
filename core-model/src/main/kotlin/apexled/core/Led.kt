@@ -87,6 +87,8 @@ data class LedState(
     val pixelCount: Int = 30,
     val ic: StripIc = StripIc.WS2811,
     val bar: LedFrame.Bar? = null,
+    /** Brilho (0..255) aplicado à barra na prévia (a cor sólida já vem com o brilho embutido). */
+    val barBrightness: Int = 255,
 ) {
     companion object {
         const val EFFECT_SOLID = 0xBE
