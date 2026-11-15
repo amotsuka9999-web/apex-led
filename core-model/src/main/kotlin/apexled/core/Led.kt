@@ -84,7 +84,7 @@ data class LedState(
     val effectSpeed: Int = 5,
     val effectLength: Int = 50,
     val order: ColorOrder = ColorOrder.RGB,
-    val pixelCount: Int = 30,
+    val pixelCount: Int = 200,
     val ic: StripIc = StripIc.WS2811,
     val bar: LedFrame.Bar? = null,
     /** Brilho (0..255) aplicado à barra na prévia (a cor sólida já vem com o brilho embutido). */

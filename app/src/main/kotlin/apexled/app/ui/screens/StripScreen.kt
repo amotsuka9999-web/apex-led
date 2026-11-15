@@ -24,6 +24,7 @@ import apexled.app.data.ThemeMode
 import apexled.app.ui.components.BigButton
 import apexled.app.ui.components.ChipRow
 import apexled.app.ui.components.LabeledSlider
+import apexled.app.ui.components.NumberField
 import apexled.app.ui.components.SectionCard
 import apexled.core.ColorOrder
 import apexled.core.LedCommand
@@ -67,8 +68,18 @@ fun StripScreen(graph: AppGraph) {
         }
 
         SectionCard("Número de pixels") {
-            LabeledSlider("Pixels", state.pixelCount.toFloat(), 1f..300f, { led.send(LedCommand.PixelCount(it.toInt())) }, "${state.pixelCount}")
-            Text("⚠ Igual ao tipo de CI: comando ainda não capturado. Aqui só ajusta o desenho da prévia; configure o valor real no BanlanX.",
+            var density by remember { mutableStateOf(200f) }
+            var meters by remember { mutableStateOf(1f) }
+            Text("Calculadora: LEDs por metro × comprimento da fita.", style = MaterialTheme.typography.bodyMedium)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                NumberField("LEDs por metro", density, { density = it.coerceAtLeast(1f) }, Modifier.weight(1f), 0)
+                NumberField("Comprimento", meters, { meters = it.coerceAtLeast(0.1f) }, Modifier.weight(1f), 2, "m")
+            }
+            val calc = (density * meters).toInt().coerceIn(1, 2048)
+            BigButton("Usar $calc pixels", { led.send(LedCommand.PixelCount(calc)) }, Modifier.fillMaxWidth(), primary = false)
+            LabeledSlider("Pixels", state.pixelCount.toFloat(), 1f..1000f, { led.send(LedCommand.PixelCount(it.toInt())) }, "${state.pixelCount}")
+            Text("⚠ Comando do SP621E para a quantidade de pixels ainda não capturado: aqui só ajusta a prévia (que desenha no máximo 48 pontos). " +
+                "Configure o valor real no BanlanX.",
                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 

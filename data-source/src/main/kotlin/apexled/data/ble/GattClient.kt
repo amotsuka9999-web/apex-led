@@ -201,7 +201,7 @@ class GattClient(
         val waiter = CompletableDeferred<Boolean>()
         pendingWrite = if (noResponse) null else waiter
         val started = if (Build.VERSION.SDK_INT >= 33) {
-            g.writeCharacteristic(ch, data, type) == BluetoothGatt.GATT_SUCCESS
+            g.writeCharacteristic(ch, data, type) == android.bluetooth.BluetoothStatusCodes.SUCCESS
         } else {
             @Suppress("DEPRECATION") run { ch.writeType = type; ch.value = data; g.writeCharacteristic(ch) }
         }
