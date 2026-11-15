@@ -30,7 +30,7 @@ jobs:
         run: |
           ./gradlew assembleDebug
           cp app/build/outputs/apk/debug/app-debug.apk apex-led.apk
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: apex-led-debug-apk
           path: apex-led.apk
