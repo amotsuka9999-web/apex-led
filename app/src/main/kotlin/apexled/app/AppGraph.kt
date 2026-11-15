@@ -71,7 +71,7 @@ class AppGraph(private val context: Context) {
     // ---- LED ----------------------------------------------------------------------------------
 
     val fakeLed = FakeLedController()
-    private val gattLed = GattClient(context, scope, "led")
+    private val gattLed = GattClient(context, scope, "led", alwaysWriteWithResponse = true)
     private var realLed: Sp621eController? = null
     private val _led = MutableStateFlow<LedController>(fakeLed)
     val led: StateFlow<LedController> = _led.asStateFlow()
@@ -103,7 +103,8 @@ class AppGraph(private val context: Context) {
     fun connectLed(address: String, name: String?) {
         if (!BlePermissions.hasAll(context)) { _notices.value = "Conceda a permissão de Bluetooth primeiro."; return }
         update { it.copy(ledAddress = address, ledName = name, ledSimulated = false) }
-        val real = realLed ?: Sp621eController(scope, BleLedTransport(gattLed), initial = _settings.value.led).also {
+        val real = realLed ?: // 120 ms entre pacotes: o uniled espera 400 ms; rajadas rápidas (efeito + cor) fazem o SP621E perder comandos.
+            Sp621eController(scope, BleLedTransport(gattLed), initial = _settings.value.led, interPacketDelayMs = 120).also {
             realLed = it
             scope.launch { it.notices.collect { msg -> _notices.value = msg } }
         }

@@ -41,6 +41,11 @@ class GattClient(
     private val context: Context,
     private val scope: CoroutineScope,
     private val tag: String = "gatt",
+    /**
+     * Sempre escrever COM resposta. O SP621E/BanlanX descarta escritas sem resposta: o `uniled`
+     * (banlanx device.py) usa `write_gatt_char(..., True)` e marca a versão sem resposta como "Do not use!".
+     */
+    private val alwaysWriteWithResponse: Boolean = false,
 ) {
     private val _state = MutableStateFlow(LedLinkState.DISCONNECTED)
     val state: StateFlow<LedLinkState> = _state.asStateFlow()
@@ -196,7 +201,9 @@ class GattClient(
         val g = gatt ?: return false
         val ch = characteristic ?: return false
         if (_state.value != LedLinkState.CONNECTED) return false
-        val noResponse = ch.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0
+        val canWrite = ch.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0
+        val noResponse = (!alwaysWriteWithResponse || !canWrite) &&
+            ch.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0
         val type = if (noResponse) BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE else BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         val waiter = CompletableDeferred<Boolean>()
         pendingWrite = if (noResponse) null else waiter
