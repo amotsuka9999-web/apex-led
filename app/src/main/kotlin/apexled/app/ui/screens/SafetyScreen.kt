@@ -156,7 +156,7 @@ fun SafetyScreen(graph: AppGraph) {
             LabeledSlider("Brilho da segurança", cfg.brightness.toFloat(), 20f..255f, { v -> upd { it.copy(brightness = v.toInt()) } },
                 "${cfg.brightness * 100 / 255} %")
             LabeledSlider("Pisca: período", cfg.flashPeriodMs.toFloat(), 200f..1000f, { v -> upd { it.copy(flashPeriodMs = v.toLong()) } },
-                "${cfg.flashPeriodMs} ms", hint = "A fita é atualizada no máximo a 10 Hz (a cada 100 ms).")
+                "${cfg.flashPeriodMs} ms", hint = "A fita é atualizada até 20 vezes por segundo (a cada 50 ms).")
             LabeledSlider("Tempo sem dados → falha", cfg.signalTimeoutMs.toFloat(), 500f..5000f, { v -> upd { it.copy(signalTimeoutMs = v.toLong()) } },
                 String.format(Locale.US, "%.1f s", cfg.signalTimeoutMs / 1000f))
         }

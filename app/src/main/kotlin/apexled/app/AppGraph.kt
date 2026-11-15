@@ -122,7 +122,7 @@ class AppGraph(private val context: Context) {
         if (!BlePermissions.hasAll(context)) { _notices.value = "Conceda a permissão de Bluetooth primeiro."; return }
         update { it.copy(ledAddress = address, ledName = name, ledSimulated = false) }
         val real = realLed ?: // 120 ms entre pacotes: o uniled espera 400 ms; rajadas rápidas (efeito + cor) fazem o SP621E perder comandos.
-            Sp621eController(scope, BleLedTransport(gattLed), initial = _settings.value.led, interPacketDelayMs = 120).also {
+            Sp621eController(scope, BleLedTransport(gattLed), initial = _settings.value.led, minFlushIntervalMs = TICK_MS, interPacketDelayMs = 120).also {
             realLed = it
             scope.launch { it.notices.collect { msg -> _notices.value = msg } }
         }
@@ -164,7 +164,7 @@ class AppGraph(private val context: Context) {
         _extraLeds.value.firstOrNull { it.address == address }?.let { return it }
         val gatt = GattClient(context, scope, "led-extra", alwaysWriteWithResponse = true)
         // começa no estado atual da principal; ao conectar, o controlador envia o estado completo
-        val ctrl = Sp621eController(scope, BleLedTransport(gatt), initial = realLed?.state?.value ?: _settings.value.led, interPacketDelayMs = 120)
+        val ctrl = Sp621eController(scope, BleLedTransport(gatt), initial = realLed?.state?.value ?: _settings.value.led, minFlushIntervalMs = TICK_MS, interPacketDelayMs = 120)
         return ExtraLed(address, name, gatt, ctrl).also { _extraLeds.value = _extraLeds.value + it }
     }
 
@@ -321,5 +321,8 @@ class AppGraph(private val context: Context) {
 
     fun stopAll() { stopSource(); disconnectLed() }
 
-    companion object { const val TICK_MS = 100L }
+    companion object {
+        /** Ciclo do motor de segurança: 50 ms = 20 atualizações por segundo na fita. */
+        const val TICK_MS = 50L
+    }
 }

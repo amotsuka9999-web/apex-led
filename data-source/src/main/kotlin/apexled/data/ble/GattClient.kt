@@ -184,6 +184,9 @@ class GattClient(
         private fun markReady() {
             attempt = 0
             _lastError.value = null
+            // Intervalo de conexão curto (~7,5–15 ms em vez de ~30–50 ms): cada escrita com resposta e cada
+            // notificação chegam mais rápido. Gasta um pouco mais de bateria, só enquanto conectado.
+            runCatching { gatt?.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH) }
             _state.value = LedLinkState.CONNECTED
             gatt?.readRemoteRssi()
         }

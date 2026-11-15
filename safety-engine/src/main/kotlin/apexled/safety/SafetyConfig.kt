@@ -43,7 +43,7 @@ data class SafetyConfig(
     /** Sem amostra nova por este tempo → estado de falha. */
     val signalTimeoutMs: Long = 1500,
     val fault: FaultConfig = FaultConfig(),
-    /** Período do pisca de alerta crítico (ms). 400 = 2,5 Hz; com a taxa BLE de 10 Hz dá 2 quadros por fase. */
+    /** Período do pisca de alerta crítico (ms). 400 = 2,5 Hz; com a fita a 20 Hz dá 4 quadros por fase. */
     val flashPeriodMs: Long = 400,
     /** Inclui o fator de bateria baixa no modo Combinado. */
     val batteryFactor: Boolean = true,
