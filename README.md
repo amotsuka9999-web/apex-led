@@ -35,10 +35,13 @@ O link sempre aponta para o último build da `main` (ou de uma branch `claude/*`
 
 ## Relógio (Galaxy Watch / Wear OS)
 
-O app do relógio é um controle remoto do app do celular. Ele tem 3 páginas, que você passa deslizando:
+O app do relógio é um controle remoto do app do celular. Ele tem 4 páginas, que você passa deslizando:
 1. **Modo seguro:** liga/desliga e mostra velocidade, PWM e bateria, com a cor da fita em volta. Vibra quando a margem se esgota.
-2. **Cores fixas:** 8 cores e OFF.
-3. **Modos:** 6 efeitos prontos.
+2. **Setas:** esquerda, direita e pisca-alerta (toque de novo para desligar).
+3. **Cores fixas:** 8 cores e OFF.
+4. **Modos:** 6 efeitos prontos.
+
+**Bloco (tile):** na tela inicial do relógio, deslize até o fim, toque em **+** e escolha **Apex LED**. Ele liga o modo seguro e as setas sem abrir o app.
 
 Escolher uma cor ou um modo pausa a segurança; ligue o modo seguro de novo na página 1.
 
@@ -47,6 +50,19 @@ Escolher uma cor ou um modo pausa a segurança; ligue o modo seguro de novo na p
 2. Em **Configurações → Opções do desenvolvedor**, ative **Depuração ADB** e **Depuração por Wi-Fi** (celular e relógio na mesma rede Wi-Fi).
 3. No celular, baixe o APK do relógio: **https://github.com/amotsuka9999-web/apex-led/releases/latest/download/apex-led-relogio.apk**
 4. Instale no relógio com um app de instalação por ADB no celular (por exemplo, *Wear Installer 2* ou *Bugjaeger*): toque em **Parear novo dispositivo** no relógio, digite o código no app do celular e escolha o `apex-led-relogio.apk`.
+
+## Recursos
+
+- **Grupo de até 10 fitas**, cada uma com uma posição: Geral, Esquerda, Direita, Capacete ou Na roda (gira).
+  - Seta: pisca âmbar nas fitas do lado (e nas "Geral"); a da roda e a do capacete só no pisca-alerta.
+  - Capacete: lanterna vermelha fraca e vermelho forte ao frear (corrente de regeneração ou desaceleração forte), sempre que a roda estiver conectada.
+- **Segurança:** modos PWM, Velocidade (com escala própria em km/h, opcional), Combinado.
+- **Brilho dia/noite** pelo horário (segurança e setas).
+- **Alertas de voz:** PWM, bateria da roda, sinal perdido e bateria do celular baixa.
+- **Passeios em CSV** (aba Config) e **backup/restauração** das configurações.
+- **Modo técnico** (aba Config): mostra simulador, fita simulada, ponte WheelLog, diagnóstico e o modo Barra.
+
+Publicação na Play Store: veja `docs/play-store.md`. O guia `docs/captura-ble.md` ficou como referência (só é necessário para descobrir comandos novos da placa).
 
 ## Rodas suportadas
 
