@@ -174,6 +174,7 @@ fun HomeScreen(graph: AppGraph) {
                 diag?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
 
+            SwitchRow("Conectar sozinho ao abrir o app", settings.autoConnectWheel, { v -> graph.update { it.copy(autoConnectWheel = v) } })
             if (!running) BigButton("Conectar / iniciar", { graph.startSource() }, Modifier.fillMaxWidth(), enabled = settings.source == SourceKind.SIMULATOR || hasPerm || settings.source == SourceKind.WHEELLOG_BRIDGE)
             else DangerButton("Parar", { graph.stopSource() }, Modifier.fillMaxWidth())
         }

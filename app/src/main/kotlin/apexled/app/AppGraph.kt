@@ -404,8 +404,18 @@ class AppGraph(private val context: Context) {
                 }
                 if (overlay != null) { c.applyFrame(overlay); applied[c] = "overlay"; continue }
                 when (cfg.show) {
-                    StripShow.SAFETY -> if (safetyFrame != null) { c.applyFrame(safetyFrame); applied[c] = "safety" }
-                        else if (applied[c] != null && applied[c] != "manual") { restoreManual(c, manualState()); applied[c] = "manual" }
+                    StripShow.SAFETY -> {
+                        val rest = set.safety.fixedColor.takeIf { set.safety.enabled && it.enabled }?.color
+                        when {
+                            safetyFrame != null -> { c.applyFrame(safetyFrame); applied[c] = "safety" }
+                            // segurança ligada, mas sem roda: fica na cor de repouso escolhida (não apaga, não fica verde)
+                            rest != null -> {
+                                val key = "rest:$rest:$level"
+                                if (applied[c] != key) { c.applyFrame(LedFrame(rest, (255 * level).toInt())); applied[c] = key }
+                            }
+                            applied[c] != null && applied[c] != "manual" -> { restoreManual(c, manualState()); applied[c] = "manual" }
+                        }
+                    }
                     StripShow.COLOR -> {
                         val key = "color:${cfg.color}:$level"
                         if (applied[c] != key) { c.applyFrame(LedFrame(cfg.color, (255 * level).toInt())); applied[c] = key }
@@ -440,6 +450,8 @@ class AppGraph(private val context: Context) {
             fakeLed.let { f -> restoreManual(f, s.led) }
             _loaded.value = true
             if (!s.ledSimulated && s.ledAddress != null && BlePermissions.hasAll(context)) connectLed(s.ledAddress, s.ledName)
+            // ao abrir o app, já liga na roda escolhida da última vez
+            if (s.autoConnectWheel && s.source == SourceKind.DIRECT_BLE && s.wheelAddress != null && BlePermissions.hasAll(context)) startSource()
             _settings.drop(1).debounce(600).collect { repo.save(it) }
         }
         voice = VoiceAlerts(context) { msg -> _notices.value = msg }

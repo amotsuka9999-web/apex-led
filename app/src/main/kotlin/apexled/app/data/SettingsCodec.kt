@@ -45,6 +45,7 @@ object SettingsCodec {
         put("ledStrip", strip(s.ledStrip))
         put("turnSignalSeconds", s.turnSignalSeconds)
         put("tripLog", s.tripLog)
+        put("autoConnectWheel", s.autoConnectWheel)
         put("dayNight", JSONObject().put("enabled", s.dayNight.enabled).put("dayStartsHour", s.dayNight.dayStartsHour)
             .put("nightStartsHour", s.dayNight.nightStartsHour).put("dayLevel", s.dayNight.dayLevel.toDouble()).put("nightLevel", s.dayNight.nightLevel.toDouble()))
         put("voice", JSONObject().put("enabled", s.voice.enabled).put("signalLost", s.voice.signalLost)
@@ -81,6 +82,7 @@ object SettingsCodec {
                     ?: StripConfig(side = enumOr(o.optString("ledSide"), LedSide.BOTH)),
                 turnSignalSeconds = o.optInt("turnSignalSeconds", d.turnSignalSeconds).coerceIn(2, 120),
                 tripLog = o.optBoolean("tripLog", d.tripLog),
+                autoConnectWheel = o.optBoolean("autoConnectWheel", d.autoConnectWheel),
                 dayNight = o.optJSONObject("dayNight")?.let { n ->
                     DayNightConfig(
                         enabled = n.optBoolean("enabled", false),

@@ -36,6 +36,8 @@ data class AppSettings(
     val voice: VoiceConfig = VoiceConfig(),
     /** Grava cada passeio em CSV enquanto a roda está conectada. */
     val tripLog: Boolean = false,
+    /** Conecta sozinho na última roda ao abrir o app. */
+    val autoConnectWheel: Boolean = true,
     val led: LedState = LedState(),
 ) {
     val activeProfile: WheelProfile
