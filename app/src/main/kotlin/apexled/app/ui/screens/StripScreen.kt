@@ -94,9 +94,11 @@ fun StripScreen(graph: AppGraph) {
 
         SectionCard("Aparência") {
             ChipRow(ThemeMode.entries, settings.theme, { it.label }, { m -> graph.update { it.copy(theme = m) } })
+            SwitchRow("Modo técnico", settings.technicalMode, { v -> graph.update { it.copy(technicalMode = v) } },
+                hint = "Mostra as ferramentas de teste: simulador, fita simulada, ponte WheelLog, diagnóstico da conexão e o modo Barra.")
         }
 
-        if (settings.ledSimulated) {
+        if (settings.ledSimulated && settings.technicalMode) {
             SectionCard("Comandos (fita simulada)", "Bytes que o app enviaria ao SP621E") {
                 Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
                     if (log.isEmpty()) Text("Nada enviado ainda.", style = MaterialTheme.typography.bodyMedium)
@@ -106,7 +108,7 @@ fun StripScreen(graph: AppGraph) {
         }
 
         SectionCard("Sobre") {
-            Text("Apex LED 0.1.0 · GPL-3.0. Indicador visual adicional: não substitui alarmes da roda. Protocolo do SP621E baseado em engenharia reversa " +
+            Text("Apex LED ${apexled.app.BuildConfig.VERSION_NAME} · GPL-3.0. Indicador visual adicional: não substitui alarmes da roda. Protocolo do SP621E baseado em engenharia reversa " +
                 "da comunidade (uniled, MIT) e ainda não validado em hardware.",
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

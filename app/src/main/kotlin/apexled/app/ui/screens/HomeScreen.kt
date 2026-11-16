@@ -108,7 +108,7 @@ fun HomeScreen(graph: AppGraph) {
 
         // ---- Fita --------------------------------------------------------------------------
         SectionCard("Fita LED (SP621E)") {
-            SwitchRow("Fita simulada (sem Bluetooth)", settings.ledSimulated, { graph.setLedSimulated(it) },
+            if (settings.technicalMode || settings.ledSimulated) SwitchRow("Fita simulada (sem Bluetooth)", settings.ledSimulated, { graph.setLedSimulated(it) },
                 hint = "Mostra a fita na tela e registra os comandos. Útil para testar sem o hardware.")
             if (!settings.ledSimulated) {
                 val (t, c) = when (ledLink) {
@@ -149,7 +149,8 @@ fun HomeScreen(graph: AppGraph) {
         // ---- Roda --------------------------------------------------------------------------
         SectionCard("Roda", "Fonte da telemetria e perfil") {
             val running = source != null
-            ChipRow(SourceKind.entries, settings.source, { it.label() }, { k -> if (!running) graph.update { s -> s.copy(source = k) } })
+            val kinds = if (settings.technicalMode) SourceKind.entries else listOf(SourceKind.DIRECT_BLE).let { if (settings.source in it) it else it + settings.source }
+            ChipRow(kinds, settings.source, { it.label() }, { k -> if (!running) graph.update { s -> s.copy(source = k) } })
             if (running) Text("Pare a conexão para trocar a fonte.", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Perfil", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ChipRow(settings.profiles, settings.activeProfile, { it.name }, { p -> graph.update { it.copy(activeProfileId = p.id) } })
@@ -183,7 +184,7 @@ fun HomeScreen(graph: AppGraph) {
                 Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             (srcStatus as? SourceStatus.Failed)?.let { Text(it.reason, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error) }
-            (source as? apexled.data.DirectBleSource)?.let { d ->
+            if (settings.technicalMode) (source as? apexled.data.DirectBleSource)?.let { d ->
                 val diag by d.diagnostics.collectAsState()
                 diag?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }

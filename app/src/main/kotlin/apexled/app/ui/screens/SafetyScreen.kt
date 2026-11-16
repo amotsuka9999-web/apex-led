@@ -103,7 +103,8 @@ fun SafetyScreen(graph: AppGraph) {
 
         // ---- modo -------------------------------------------------------------------------
         SectionCard("Modo") {
-            ChipRow(SafetyMode.entries, cfg.mode, { it.label }, { m -> upd { it.copy(mode = m) } })
+            val modes = SafetyMode.entries.filter { it != SafetyMode.BAR || settings.technicalMode || cfg.mode == SafetyMode.BAR }
+            ChipRow(modes, cfg.mode, { it.label }, { m -> upd { it.copy(mode = m) } })
             Text(
                 when (cfg.mode) {
                     SafetyMode.PWM -> "Cor por faixa de PWM: verde até 60%, depois amarelo, laranja, vermelho e vermelho piscando acima de ${(profile.flashAbovePwm * 100).toInt()}%."

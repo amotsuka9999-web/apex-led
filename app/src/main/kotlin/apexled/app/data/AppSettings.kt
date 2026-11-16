@@ -14,7 +14,7 @@ data class AppSettings(
     /** Detectar o perfil pelo modelo que a roda informa (Veteran informa; Begode/Gotway não). */
     val autoDetectProfile: Boolean = true,
     val safety: SafetyConfig = SafetyConfig(),
-    val source: SourceKind = SourceKind.SIMULATOR,
+    val source: SourceKind = SourceKind.DIRECT_BLE,
     val wheelAddress: String? = null,
     val wheelName: String? = null,
     val ledAddress: String? = null,
@@ -25,6 +25,8 @@ data class AppSettings(
     val ledSimulated: Boolean = true,
     val theme: ThemeMode = ThemeMode.DARK,
     val disclaimerAccepted: Boolean = false,
+    /** Mostra ferramentas de teste: simulador, fita simulada, ponte WheelLog, diagnóstico e modo Barra. */
+    val technicalMode: Boolean = false,
     val led: LedState = LedState(),
 ) {
     val activeProfile: WheelProfile

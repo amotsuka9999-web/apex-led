@@ -41,6 +41,7 @@ object SettingsCodec {
         put("ledName", s.ledName ?: JSONObject.NULL)
         put("extraLeds", JSONArray().also { a -> s.extraLeds.forEach { a.put(JSONObject().put("address", it.address).put("name", it.name ?: JSONObject.NULL)) } })
         put("ledSimulated", s.ledSimulated)
+        put("technicalMode", s.technicalMode)
         put("theme", s.theme.name)
         put("disclaimerAccepted", s.disclaimerAccepted)
         put("led", led(s.led))
@@ -67,6 +68,7 @@ object SettingsCodec {
                 wheelName = o.optStringOrNull("wheelName"),
                 ledAddress = o.optStringOrNull("ledAddress"),
                 ledName = o.optStringOrNull("ledName"),
+                technicalMode = o.optBoolean("technicalMode", false),
                 extraLeds = o.optJSONArray("extraLeds")?.let { a ->
                     (0 until a.length()).mapNotNull { i ->
                         a.optJSONObject(i)?.let { e -> e.optStringOrNull("address")?.let { SavedLed(it, e.optStringOrNull("name")) } }
