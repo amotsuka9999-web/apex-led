@@ -43,6 +43,7 @@ import apexled.app.ui.components.ScanDialog
 import apexled.app.ui.components.ScanTarget
 import apexled.app.ui.components.SectionCard
 import apexled.app.ui.components.SimulatorPanel
+import apexled.app.ui.components.StripsCard
 import apexled.app.ui.components.StatusPill
 import apexled.app.ui.components.SwitchRow
 import apexled.core.LedLinkState
@@ -108,53 +109,26 @@ fun HomeScreen(graph: AppGraph) {
             }
         }
 
-        SectionCard("Setas", "Piscam âmbar nas fitas do lado e no capacete; desligam sozinhas em ${settings.turnSignalSeconds} s.") {
-            TurnSignalRow(graph)
-        }
-
-        // ---- Fita --------------------------------------------------------------------------
-        SectionCard("Fita LED (SP621E)") {
-            if (settings.technicalMode || settings.ledSimulated) SwitchRow("Fita simulada (sem Bluetooth)", settings.ledSimulated, { graph.setLedSimulated(it) },
-                hint = "Mostra a fita na tela e registra os comandos. Útil para testar sem o hardware.")
-            if (!settings.ledSimulated) {
-                val (t, c) = when (ledLink) {
-                    LedLinkState.CONNECTED -> "Conectada" to OkGreen
-                    LedLinkState.CONNECTING -> "Conectando…" to WarnAmber
-                    LedLinkState.RECONNECTING -> "Reconectando…" to WarnAmber
-                    LedLinkState.SCANNING -> "Buscando…" to WarnAmber
-                    LedLinkState.DISCONNECTED -> "Desconectada" to BadRed
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatusPill(t, c)
-                    if (ledLink == LedLinkState.CONNECTED) rssi?.let { Text("$it dBm", Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodyMedium) }
-                }
-                Text(
-                    (settings.ledName ?: ledName ?: "Nenhuma fita escolhida") + (settings.ledAddress?.let { "  ·  $it" } ?: ""),
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BigButton("Buscar fita", { scan = ScanTarget.LED }, Modifier.weight(1f), enabled = hasPerm)
-                    if (ledLink != LedLinkState.DISCONNECTED) BigButton("Desconectar", { graph.disconnectLed() }, Modifier.weight(1f), primary = false)
-                    else if (settings.ledAddress != null) BigButton("Reconectar", { graph.connectLed(settings.ledAddress!!, settings.ledName) },
-                        Modifier.weight(1f), primary = false, enabled = hasPerm)
-                }
-
-                // ---- grupo: até 10 fitas com a mesma configuração (como no BanlanX) ----
-                if (settings.ledAddress != null) {
-                    Text("Posição desta fita", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    ChipRow(LedSide.entries, settings.ledSide, { it.label }, { v -> graph.update { it.copy(ledSide = v) } })
-                    Text("Grupo: ${1 + extras.size} de ${FanoutLedController.MAX_DEVICES} fitas. Todas recebem os mesmos comandos.",
-                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    extras.forEach { e ->
-                        val side = settings.extraLeds.firstOrNull { it.address == e.address }?.side ?: LedSide.BOTH
-                        ExtraLedRow(e, side, { v -> graph.setExtraSide(e.address, v) }) { graph.removeExtraLed(e.address) }
-                    }
-                    if (1 + extras.size < FanoutLedController.MAX_DEVICES) BigButton("Adicionar outra fita",
-                        { addingExtra = true; scan = ScanTarget.LED }, Modifier.fillMaxWidth(), primary = false, enabled = hasPerm)
-                    if (extras.size >= 6) Text("Muitos celulares Android só mantêm ~7 conexões Bluetooth ao mesmo tempo.",
-                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // ---- Fitas -------------------------------------------------------------------------
+        if (settings.ledAddress == null && !settings.ledSimulated) {
+            SectionCard("Fitas de LED", "Conecte a primeira placa SP621E. Depois dá para adicionar até 10.") {
+                BigButton("Buscar fita", { scan = ScanTarget.LED }, Modifier.fillMaxWidth(), enabled = hasPerm)
+            }
+        } else {
+            StripsCard(graph, hasPerm) { addingExtra = true; scan = ScanTarget.LED }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (!settings.ledSimulated) {
+                    if (ledLink != LedLinkState.DISCONNECTED) BigButton("Desconectar fitas", { graph.disconnectLed() }, Modifier.weight(1f), primary = false)
+                    else BigButton("Reconectar fitas", { graph.connectLed(settings.ledAddress!!, settings.ledName) }, Modifier.weight(1f), primary = false, enabled = hasPerm)
+                    BigButton("Trocar principal", { scan = ScanTarget.LED }, Modifier.weight(1f), primary = false, enabled = hasPerm)
                 }
             }
+        }
+        if (settings.technicalMode || settings.ledSimulated) SwitchRow("Fita simulada (sem Bluetooth)", settings.ledSimulated, { graph.setLedSimulated(it) },
+            hint = "Mostra a fita na tela e registra os comandos. Útil para testar sem o hardware.")
+
+        SectionCard("Setas", "Esquerda e direita piscam nas fitas do lado; o alerta, em todas. Desligam sozinhas em ${settings.turnSignalSeconds} s.") {
+            TurnSignalRow(graph)
         }
 
         // ---- Roda --------------------------------------------------------------------------
@@ -273,28 +247,6 @@ private fun Tile(label: String, value: String, unit: String, modifier: Modifier 
             }
         }
     }
-}
-
-@Composable
-private fun ExtraLedRow(e: AppGraph.ExtraLed, side: LedSide, onSide: (LedSide) -> Unit, onRemove: () -> Unit) {
-    val link by e.link.collectAsState()
-    val rssi by e.rssi.collectAsState()
-    val (t, c) = when (link) {
-        LedLinkState.CONNECTED -> "Conectada" to OkGreen
-        LedLinkState.DISCONNECTED -> "Desconectada" to BadRed
-        else -> "Conectando…" to WarnAmber
-    }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Column(Modifier.weight(1f)) {
-            Text(e.name ?: e.address, style = MaterialTheme.typography.bodyLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                StatusPill(t, c)
-                if (link == LedLinkState.CONNECTED) rssi?.let { Text("$it dBm", style = MaterialTheme.typography.labelMedium) }
-            }
-        }
-        BigButton("Remover", onRemove, primary = false)
-    }
-    ChipRow(LedSide.entries, side, { it.label }, onSide)
 }
 
 /** Botões de seta e pisca-alerta (também no relógio). */

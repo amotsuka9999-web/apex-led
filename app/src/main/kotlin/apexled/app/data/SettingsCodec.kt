@@ -39,10 +39,10 @@ object SettingsCodec {
         put("wheelName", s.wheelName ?: JSONObject.NULL)
         put("ledAddress", s.ledAddress ?: JSONObject.NULL)
         put("ledName", s.ledName ?: JSONObject.NULL)
-        put("extraLeds", JSONArray().also { a -> s.extraLeds.forEach { a.put(JSONObject().put("address", it.address).put("name", it.name ?: JSONObject.NULL).put("side", it.side.name)) } })
+        put("extraLeds", JSONArray().also { a -> s.extraLeds.forEach { a.put(JSONObject().put("address", it.address).put("name", it.name ?: JSONObject.NULL).put("strip", strip(it.strip))) } })
         put("ledSimulated", s.ledSimulated)
         put("technicalMode", s.technicalMode)
-        put("ledSide", s.ledSide.name)
+        put("ledStrip", strip(s.ledStrip))
         put("turnSignalSeconds", s.turnSignalSeconds)
         put("tripLog", s.tripLog)
         put("dayNight", JSONObject().put("enabled", s.dayNight.enabled).put("dayStartsHour", s.dayNight.dayStartsHour)
@@ -77,7 +77,8 @@ object SettingsCodec {
                 ledAddress = o.optStringOrNull("ledAddress"),
                 ledName = o.optStringOrNull("ledName"),
                 technicalMode = o.optBoolean("technicalMode", false),
-                ledSide = enumOr(o.optString("ledSide"), d.ledSide),
+                ledStrip = o.optJSONObject("ledStrip")?.let { strip(it) }
+                    ?: StripConfig(side = enumOr(o.optString("ledSide"), LedSide.BOTH)),
                 turnSignalSeconds = o.optInt("turnSignalSeconds", d.turnSignalSeconds).coerceIn(2, 120),
                 tripLog = o.optBoolean("tripLog", d.tripLog),
                 dayNight = o.optJSONObject("dayNight")?.let { n ->
@@ -100,7 +101,8 @@ object SettingsCodec {
                 } ?: d.voice,
                 extraLeds = o.optJSONArray("extraLeds")?.let { a ->
                     (0 until a.length()).mapNotNull { i ->
-                        a.optJSONObject(i)?.let { e -> e.optStringOrNull("address")?.let { SavedLed(it, e.optStringOrNull("name"), enumOr(e.optString("side"), LedSide.BOTH)) } }
+                        a.optJSONObject(i)?.let { e -> e.optStringOrNull("address")?.let { SavedLed(it, e.optStringOrNull("name"),
+                            e.optJSONObject("strip")?.let { j -> strip(j) } ?: StripConfig(side = enumOr(e.optString("side"), LedSide.BOTH))) } }
                     }.distinctBy { it.address }.take(FanoutLedController.MAX_DEVICES - 1)
                 } ?: emptyList(),
                 ledSimulated = o.optBoolean("ledSimulated", d.ledSimulated),
@@ -120,6 +122,19 @@ object SettingsCodec {
         enumValues<E>().firstOrNull { it.name == name } ?: default
 
     private fun rgb(c: Rgb) = JSONArray(listOf(c.r, c.g, c.b))
+
+    private fun strip(c: StripConfig) = JSONObject().put("side", c.side.name).put("show", c.show.name).put("color", rgb(c.color))
+        .put("effectId", c.effectId).put("effectSpeed", c.effectSpeed).put("brakeLight", c.brakeLight).put("turnSignals", c.turnSignals)
+
+    private fun strip(o: JSONObject) = StripConfig(
+        side = enumOr(o.optString("side"), LedSide.BOTH),
+        show = enumOr(o.optString("show"), StripShow.SAFETY),
+        color = rgb(o.optJSONArray("color"), Rgb(0, 120, 255)),
+        effectId = o.optInt("effectId", 1),
+        effectSpeed = o.optInt("effectSpeed", 6).coerceIn(1, 10),
+        brakeLight = o.optBoolean("brakeLight", false),
+        turnSignals = o.optBoolean("turnSignals", true),
+    )
     private fun rgb(a: JSONArray?, d: Rgb): Rgb = try {
         if (a == null) d else Rgb(a.getInt(0).coerceIn(0, 255), a.getInt(1).coerceIn(0, 255), a.getInt(2).coerceIn(0, 255))
     } catch (e: Exception) { d }

@@ -31,6 +31,8 @@ import apexled.safety.SafetyOutput
 import apexled.wheel.AutoDecoder
 import apexled.led.FanoutLedController
 import apexled.app.data.SavedLed
+import apexled.app.data.StripConfig
+import apexled.app.data.StripShow
 import apexled.app.extras.TripRecorder
 import apexled.app.extras.VoiceAlerts
 import apexled.app.data.LedSide
@@ -97,10 +99,14 @@ class AppGraph(private val context: Context) {
     private val _extraLeds = MutableStateFlow<List<ExtraLed>>(emptyList())
     val extraLeds: StateFlow<List<ExtraLed>> = _extraLeds.asStateFlow()
     private val _led = MutableStateFlow<LedController>(fakeLed)
+    private val _safetyActive = MutableStateFlow(false)
     val led: StateFlow<LedController> = _led.asStateFlow()
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val ledState: StateFlow<LedState> = _led.flatMapLatest { it.state }.stateIn(scope, SharingStarted.Eagerly, LedState())
+    /** Estado mostrado na prévia e nas abas Cor/Efeitos: o manual do grupo, ou o da segurança enquanto ela controla. */
+    val ledState: StateFlow<LedState> = _led.flatMapLatest { c ->
+        if (c is FanoutLedController) combine(c.manual, c.state, _safetyActive) { m, st, sf -> if (sf) st else m } else c.state
+    }.stateIn(scope, SharingStarted.Eagerly, LedState())
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val ledLink: StateFlow<LedLinkState> = _led.flatMapLatest { it.link }.stateIn(scope, SharingStarted.Eagerly, LedLinkState.CONNECTED)
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -132,7 +138,9 @@ class AppGraph(private val context: Context) {
             realLed = it
             scope.launch { it.notices.collect { msg -> _notices.value = msg } }
         }
-        val group = realGroup ?: FanoutLedController(real) { _extraLeds.value.map { it.controller } }.also { realGroup = it }
+        val group = realGroup ?: FanoutLedController(
+            real, { _extraLeds.value.map { it.controller } }, { c -> stripOf(c).show == StripShow.SAFETY }, _settings.value.led,
+        ).also { realGroup = it }
         gattLed.connect(address)
         // fitas extras salvas: conecta junto com a principal
         _settings.value.extraLeds.forEach { e -> if (e.address != address) ensureExtra(e.address, e.name).gatt.connect(e.address) }
@@ -160,8 +168,18 @@ class AppGraph(private val context: Context) {
         ConnectionService.sync(context, this)
     }
 
-    fun setExtraSide(address: String, side: LedSide) =
-        update { it.copy(extraLeds = it.extraLeds.map { e -> if (e.address == address) e.copy(side = side) else e }) }
+    /** Muda a configuração de uma fita (address null = principal). */
+    fun updateStrip(address: String?, f: (StripConfig) -> StripConfig) = update { s ->
+        if (address == null || address == s.ledAddress) s.copy(ledStrip = f(s.ledStrip))
+        else s.copy(extraLeds = s.extraLeds.map { e -> if (e.address == address) e.copy(strip = f(e.strip)) else e })
+    }
+
+    /** Configuração da fita ligada a este controlador. */
+    fun stripOf(c: LedController): StripConfig {
+        val s = _settings.value
+        val e = _extraLeds.value.firstOrNull { it.controller === c } ?: return s.ledStrip
+        return s.extraLeds.firstOrNull { it.address == e.address }?.strip ?: StripConfig()
+    }
 
     /** Backup: todas as configurações em JSON. */
     fun exportSettings(): String = apexled.app.data.SettingsCodec.encode(_settings.value)
@@ -317,15 +335,17 @@ class AppGraph(private val context: Context) {
         else TurnState(side, clock.nowMs() + _settings.value.turnSignalSeconds.coerceIn(2, 120) * 1000L)
     }
 
-    /** Fitas com o lado de cada uma (a principal é a primeira). */
-    private fun targets(): List<Pair<LedController, LedSide>> {
+    /** Cada fita com a sua configuração (a principal é a primeira). */
+    private fun targets(): List<Pair<LedController, StripConfig>> {
         val c = _led.value
-        val s = _settings.value
-        if (c !is FanoutLedController) return listOf(c to s.ledSide)
-        return listOf(c.primary to s.ledSide) + _extraLeds.value.map { e ->
-            e.controller to (s.extraLeds.firstOrNull { it.address == e.address }?.side ?: LedSide.BOTH)
-        }
+        if (c !is FanoutLedController) return listOf(c to _settings.value.ledStrip)
+        return c.all().map { it to stripOf(it) }
     }
+
+    /** O que já foi aplicado em cada fita com conteúdo próprio (para não reenviar todo ciclo). */
+    private val applied = java.util.WeakHashMap<LedController, String>()
+
+    private fun manualState(): LedState = (_led.value as? FanoutLedController)?.manual?.value ?: manualSnapshot ?: _settings.value.led
 
     private fun blinks(turn: TurnSide, side: LedSide) = when (side) {
         LedSide.BOTH -> true
@@ -351,6 +371,7 @@ class AppGraph(private val context: Context) {
             val wasTurning = turnSnapshot != null
             if (turn != null && !wasTurning) turnSnapshot = _led.value.state.value
 
+            _safetyActive.value = active
             var safetyFrame: LedFrame? = null
             if (active) {
                 val controller = _led.value
@@ -362,35 +383,41 @@ class AppGraph(private val context: Context) {
                 driving = false
                 _safety.value = null
                 engine.reset()
-                if (turn == null) manualSnapshot?.let { restoreManual(_led.value, it) }
+                // as fitas "Segurança" voltam ao estado manual no laço abaixo
             }
 
-            // Capacete = luz de freio: vermelho fraco (lanterna) e forte ao frear, sempre que a roda estiver conectada.
+            // Freio: vermelho forte nas fitas com "luz de freio" ligada, sempre que a roda estiver conectada.
             val wheelOn = src != null && sourceStatus.value is SourceStatus.Connected
             val braking = wheelOn && brakeDetector.update(telemetry.value, now, set.safety.brake)
-            val helmetFrame = if (wheelOn) LedFrame(Rgb(255, 0, 0), ((if (braking) 255 else TAIL_LEVEL) * level).toInt()) else null
-            val targets = targets()
-            val hasHelmet = targets.any { it.second == LedSide.HELMET }
+            val on = (now % TURN_PERIOD_MS) < TURN_PERIOD_MS / 2
+            val amber = LedFrame(TURN_COLOR, if (on) (255 * level).toInt() else 0)
 
-            if (turn != null || hasHelmet) {
-                // pisca âmbar ~1,4 Hz no lado pedido; as outras fitas seguem a segurança (ou ficam como estão)
-                val on = (now % TURN_PERIOD_MS) < TURN_PERIOD_MS / 2
-                val amber = LedFrame(TURN_COLOR, if (on) (255 * level).toInt() else 0)
-                targets.forEach { (c, side) ->
-                    val f = when {
-                        turn != null && blinks(turn.side, side) -> amber
-                        side == LedSide.HELMET -> helmetFrame ?: safetyFrame
-                        else -> safetyFrame
-                    }
-                    f?.let { c.applyFrame(it) }
+            for ((c, cfg) in targets()) {
+                val overlay = when {
+                    turn != null && cfg.turnSignals && blinks(turn.side, cfg.side) -> amber
+                    cfg.brakeLight && braking -> LedFrame(Rgb(255, 0, 0), (255 * level).toInt())
+                    else -> null
                 }
-            } else safetyFrame?.let { _led.value.applyFrame(it) }
-
-            if (turn == null && wasTurning) {
-                val snap = turnSnapshot
-                turnSnapshot = null
-                if (safetyFrame == null) snap?.let { st -> targets.forEach { (c, side) -> if (side != LedSide.HELMET || helmetFrame == null) restoreManual(c, st) } }
+                if (overlay != null) { c.applyFrame(overlay); applied[c] = "overlay"; continue }
+                when (cfg.show) {
+                    StripShow.SAFETY -> if (safetyFrame != null) { c.applyFrame(safetyFrame); applied[c] = "safety" }
+                        else if (applied[c] != null && applied[c] != "manual") { restoreManual(c, manualState()); applied[c] = "manual" }
+                    StripShow.COLOR -> {
+                        val key = "color:${cfg.color}:$level"
+                        if (applied[c] != key) { c.applyFrame(LedFrame(cfg.color, (255 * level).toInt())); applied[c] = key }
+                    }
+                    StripShow.EFFECT -> {
+                        val key = "fx:${cfg.effectId}:${cfg.effectSpeed}:$level"
+                        if (applied[c] != key) {
+                            c.send(LedCommand.Power(true)); c.send(LedCommand.Effect(cfg.effectId))
+                            c.send(LedCommand.EffectSpeed(cfg.effectSpeed)); c.send(LedCommand.Brightness((255 * level).toInt()))
+                            applied[c] = key
+                        }
+                    }
+                    StripShow.OFF -> if (applied[c] != "off") { c.send(LedCommand.Power(false)); applied[c] = "off" }
+                }
             }
+            if (turn == null && wasTurning) turnSnapshot = null
             tripRecorder?.onTick(now, telemetry.value, _safety.value)
             voice?.onTick(now, telemetry.value, sourceStatus.value, set.voice)
         }

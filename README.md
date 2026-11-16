@@ -53,9 +53,11 @@ Escolher uma cor ou um modo pausa a segurança; ligue o modo seguro de novo na p
 
 ## Recursos
 
-- **Grupo de até 10 fitas**, cada uma com uma posição: Geral, Esquerda, Direita, Capacete ou Na roda (gira).
-  - Seta: pisca âmbar nas fitas do lado (e nas "Geral"); a da roda e a do capacete só no pisca-alerta.
-  - Capacete: lanterna vermelha fraca e vermelho forte ao frear (corrente de regeneração ou desaceleração forte), sempre que a roda estiver conectada.
+- **Grupo de até 10 fitas**, cada uma configurada separadamente (aba Início → Fitas → toque na fita):
+  - **Onde está:** Geral, Esquerda, Direita, Capacete ou Na roda (gira).
+  - **O que mostra:** Segurança (cor pelo PWM/velocidade; com a segurança desligada, segue as abas Cor e Efeitos), Cor fixa, Efeito ou Desligada.
+  - **Luz de freio** (vermelho forte ao frear) e **Pisca nas setas**, por fita.
+  - Setas piscam nas fitas do lado e nas "Geral"; o pisca-alerta acende todas.
 - **Segurança:** modos PWM, Velocidade (com escala própria em km/h, opcional), Combinado.
 - **Brilho dia/noite** pelo horário (segurança e setas).
 - **Alertas de voz:** PWM, bateria da roda, sinal perdido e bateria do celular baixa.

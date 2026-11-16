@@ -1,5 +1,6 @@
 package apexled.app.data
 
+import apexled.core.Rgb
 import apexled.core.LedState
 import apexled.core.SourceKind
 import apexled.core.WheelProfile
@@ -27,8 +28,8 @@ data class AppSettings(
     val disclaimerAccepted: Boolean = false,
     /** Mostra ferramentas de teste: simulador, fita simulada, ponte WheelLog, diagnóstico e modo Barra. */
     val technicalMode: Boolean = false,
-    /** Lado da fita principal. */
-    val ledSide: LedSide = LedSide.BOTH,
+    /** Configuração da fita principal. */
+    val ledStrip: StripConfig = StripConfig(),
     /** A seta desliga sozinha depois deste tempo (s). */
     val turnSignalSeconds: Int = 12,
     val dayNight: DayNightConfig = DayNightConfig(),
@@ -41,12 +42,30 @@ data class AppSettings(
         get() = profiles.firstOrNull { it.id == activeProfileId } ?: profiles.first()
 }
 
-data class SavedLed(val address: String, val name: String?, val side: LedSide = LedSide.BOTH)
+data class SavedLed(val address: String, val name: String?, val strip: StripConfig = StripConfig())
 
-/**
- * Onde a fita está montada; decide em quais fitas a seta pisca.
- * Seta: pisca nas do lado pedido, no capacete e nas "gerais"; a da roda (gira com o pneu) só no pisca-alerta.
- */
+/** O que cada fita mostra. */
+enum class StripShow(val label: String, val hint: String) {
+    SAFETY("Segurança", "Cor pelo PWM/velocidade. Com a segurança desligada, segue as abas Cor e Efeitos."),
+    COLOR("Cor fixa", "Sempre na cor escolhida."),
+    EFFECT("Efeito", "Sempre no efeito escolhido."),
+    OFF("Desligada", "Apagada (as setas e o freio ainda funcionam, se ligados)."),
+}
+
+/** Configuração de uma fita do grupo. */
+data class StripConfig(
+    val side: LedSide = LedSide.BOTH,
+    val show: StripShow = StripShow.SAFETY,
+    val color: Rgb = Rgb(0, 120, 255),
+    val effectId: Int = 1,
+    val effectSpeed: Int = 6,
+    /** Acende vermelho forte ao frear, por cima do que estiver mostrando. */
+    val brakeLight: Boolean = false,
+    /** Pisca nas setas (só vale para Esquerda, Direita e Geral). */
+    val turnSignals: Boolean = true,
+)
+
+/** Onde a fita está montada. Seta: pisca nas do lado pedido e nas "Geral"; capacete e roda só no pisca-alerta. */
 enum class LedSide(val label: String) {
     BOTH("Geral"), LEFT("Esquerda"), RIGHT("Direita"), HELMET("Capacete"), WHEEL("Na roda (gira)"),
 }
