@@ -1,5 +1,6 @@
 package apexled.safety
 
+import apexled.core.ColorStop
 import apexled.core.Rgb
 
 /** Como a cor de segurança é calculada. */
@@ -52,7 +53,24 @@ data class SafetyConfig(
     val restPulse: RestPulseConfig = RestPulseConfig(),
     val fixedColor: FixedColorConfig = FixedColorConfig(),
     val brake: BrakeConfig = BrakeConfig(),
+    /**
+     * Escala própria do modo Velocidade, com [ColorStop.at] em km/h (ex.: 0 → verde, 30 → amarelo, 45 →
+     * vermelho). null = usa a escala do PWM como % do limite de velocidade.
+     */
+    val speedStops: List<ColorStop>? = null,
+    /** Modo Velocidade com escala própria: começa a piscar a partir desta velocidade (km/h). null = no limite. */
+    val speedFlashKmh: Float? = null,
 )
+
+object DefaultSpeedStops {
+    val stops = listOf(
+        ColorStop(0f, Rgb(0, 220, 60)),
+        ColorStop(25f, Rgb(0, 220, 60)),
+        ColorStop(32f, Rgb(255, 210, 0)),
+        ColorStop(40f, Rgb(255, 110, 0)),
+        ColorStop(47f, Rgb(255, 0, 0)),
+    )
+}
 
 data class FaultConfig(
     val style: FaultStyle = FaultStyle.PULSE,

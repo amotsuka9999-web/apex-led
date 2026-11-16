@@ -2,6 +2,7 @@ package apexled.safety
 
 import apexled.core.ColorScale
 import apexled.core.LedFrame
+import apexled.core.ColorStop
 import apexled.core.Rgb
 import apexled.core.Telemetry
 import apexled.core.WheelProfile
@@ -114,7 +115,7 @@ class SafetyEngine {
         var flashing = false
         if (flashOn) {
             // Alerta crítico: cor do topo da escala, piscando em cheio. Prevalece sobre tudo.
-            color = ColorScale.colorAt(profile.pwmStops, 1f, stepped = false)
+            color = ColorScale.colorAt(activeStops(profile, config), 1f, stepped = false)
             flashing = true
             if ((nowMs % config.flashPeriodMs) >= config.flashPeriodMs / 2) brightness = 0
         } else if (braking) {
@@ -122,7 +123,7 @@ class SafetyEngine {
             if ((nowMs % config.brake.flashPeriodMs) >= config.brake.flashPeriodMs / 2) brightness = 0
         }
 
-        val bar = if (barMode) LedFrame.Bar(usage, profile.pwmStops) else null
+        val bar = if (barMode) LedFrame.Bar(usage, activeStops(profile, config)) else null
         return SafetyOutput(
             frame = LedFrame(color, brightness, bar),
             status = SafetyStatus.NORMAL,
@@ -164,10 +165,23 @@ class SafetyEngine {
         return sane(pwm)
     }
 
+    private fun speedLimit(profile: WheelProfile, config: SafetyConfig): Float = config.speedLimitKmh
+        ?: profile.tiltbackSpeedKmh.takeIf { it > 0f }
+        ?: profile.maxSpeedKmh
+
+    /** Escala em km/h do modo Velocidade, se o piloto definiu uma. */
+    private fun ownSpeedScale(config: SafetyConfig): List<ColorStop>? =
+        config.speedStops?.takeIf { config.mode == SafetyMode.SPEED && it.size >= 2 }
+
+    /** Escala de cores em uso, sempre em fração do uso (0..1): a de km/h é dividida pelo limite. */
+    private fun activeStops(profile: WheelProfile, config: SafetyConfig): List<ColorStop> {
+        val own = ownSpeedScale(config) ?: return profile.pwmStops
+        val limit = speedLimit(profile, config).coerceAtLeast(1f)
+        return own.map { ColorStop(it.at / limit, it.color) }
+    }
+
     private fun speedUsage(t: Telemetry, profile: WheelProfile, config: SafetyConfig): Float {
-        val limit = config.speedLimitKmh
-            ?: profile.tiltbackSpeedKmh.takeIf { it > 0f }
-            ?: profile.maxSpeedKmh
+        val limit = speedLimit(profile, config)
         return if (limit > 0f) sane(t.speedKmh / limit) else 0f
     }
 
@@ -201,13 +215,13 @@ class SafetyEngine {
     }
 
     private fun updateFlashLatch(usage: Float, profile: WheelProfile, config: SafetyConfig): Boolean {
-        val on = profile.flashAbovePwm
+        val on = ownSpeedScale(config)?.let { config.speedFlashKmh?.let { k -> k / speedLimit(profile, config) } ?: 1f } ?: profile.flashAbovePwm
         flashLatched = if (flashLatched) usage >= on - config.hysteresis else usage >= on
         return flashLatched
     }
 
     private fun pickColor(usage: Float, profile: WheelProfile, config: SafetyConfig): Rgb {
-        val stops = profile.pwmStops.sortedBy { it.at }
+        val stops = activeStops(profile, config).sortedBy { it.at }
         if (stops.isEmpty()) return Rgb.WHITE
         if (!config.stepped) return ColorScale.colorAt(stops, usage, stepped = false)
         val raw = stops.indexOfLast { it.at <= usage }.coerceAtLeast(0)

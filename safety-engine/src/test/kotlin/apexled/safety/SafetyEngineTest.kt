@@ -28,6 +28,29 @@ class SafetyEngineTest {
     private fun SafetyEngine.step(t: Telemetry?, now: Long, cfg: SafetyConfig = pwmOnly, p: WheelProfile = profile) =
         update(t, now, p, cfg)
 
+    // ---- escala própria de velocidade (km/h) ---------------------------------------------
+
+    private val speedCfg = SafetyConfig(
+        mode = SafetyMode.SPEED, releaseSeconds = 0f, speedLimitKmh = 50f,
+        speedStops = listOf(ColorStop(0f, Rgb(0, 255, 0)), ColorStop(30f, Rgb(255, 255, 0)), ColorStop(45f, Rgb(255, 0, 0))),
+        speedFlashKmh = 45f,
+    )
+
+    @Test fun ownSpeedScaleUsesKmh() {
+        assertEquals(Rgb(255, 255, 0), SafetyEngine().step(tel(0, speed = 30f), 0, speedCfg).frame.color)
+        assertEquals(Rgb(0, 255, 0), SafetyEngine().step(tel(0, speed = 0f), 0, speedCfg).frame.color)
+        assertFalse(SafetyEngine().step(tel(0, speed = 40f), 0, speedCfg).flashing)
+    }
+
+    @Test fun ownSpeedScaleFlashesAtChosenSpeed() {
+        assertTrue(SafetyEngine().step(tel(0, speed = 46f), 0, speedCfg).flashing)
+    }
+
+    @Test fun ownSpeedScaleIgnoredInPwmMode() {
+        val out = SafetyEngine().step(tel(0, pwm = 0.30f, speed = 40f), 0, speedCfg.copy(mode = SafetyMode.PWM))
+        assertEquals(Rgb(0, 220, 60), out.frame.color)
+    }
+
     // ---- faixas de cor ----------------------------------------------------------------------
 
     @Test fun greenBelowSixtyPercent() {

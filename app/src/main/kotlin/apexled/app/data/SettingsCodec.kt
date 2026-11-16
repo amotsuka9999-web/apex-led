@@ -148,6 +148,8 @@ object SettingsCodec {
     private fun safety(c: SafetyConfig) = JSONObject().apply {
         put("enabled", c.enabled); put("mode", c.mode.name); put("stepped", c.stepped)
         put("speedLimitKmh", c.speedLimitKmh?.toDouble() ?: JSONObject.NULL)
+        put("speedStops", c.speedStops?.let { st -> JSONArray().also { a -> st.forEach { a.put(JSONObject().put("at", it.at.toDouble()).put("c", rgb(it.color))) } } } ?: JSONObject.NULL)
+        put("speedFlashKmh", c.speedFlashKmh?.toDouble() ?: JSONObject.NULL)
         put("brightness", c.brightness); put("attackSeconds", c.attackSeconds.toDouble())
         put("releaseSeconds", c.releaseSeconds.toDouble()); put("hysteresis", c.hysteresis.toDouble())
         put("signalTimeoutMs", c.signalTimeoutMs); put("flashPeriodMs", c.flashPeriodMs)
@@ -165,6 +167,12 @@ object SettingsCodec {
             enabled = o.optBoolean("enabled", d.enabled),
             mode = enumOr(o.optString("mode"), d.mode),
             stepped = o.optBoolean("stepped", d.stepped),
+            speedStops = o.optJSONArray("speedStops")?.let { a ->
+                (0 until a.length()).mapNotNull {
+                    runCatching { a.getJSONObject(it).let { s -> ColorStop(s.getDouble("at").toFloat().coerceIn(0f, 400f), rgb(s.getJSONArray("c"), Rgb.WHITE)) } }.getOrNull()
+                }.takeIf { it.size >= 2 }
+            },
+            speedFlashKmh = if (o.isNull("speedFlashKmh") || !o.has("speedFlashKmh")) null else o.optDouble("speedFlashKmh").toFloat().takeIf { it > 0f },
             speedLimitKmh = if (o.isNull("speedLimitKmh") || !o.has("speedLimitKmh")) null else o.optDouble("speedLimitKmh").toFloat().takeIf { it > 0f },
             brightness = o.optInt("brightness", d.brightness).coerceIn(0, 255),
             attackSeconds = f("attackSeconds", d.attackSeconds).coerceIn(0f, 10f),

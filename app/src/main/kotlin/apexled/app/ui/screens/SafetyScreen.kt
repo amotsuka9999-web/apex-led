@@ -121,6 +121,28 @@ fun SafetyScreen(graph: AppGraph) {
                     { v -> upd { it.copy(speedLimitKmh = v) } }, String.format(Locale.US, "%.0f km/h", limit),
                     hint = "A cor chega ao vermelho piscando perto deste valor.")
             }
+            if (cfg.mode == SafetyMode.SPEED) {
+                SwitchRow("Escala própria em km/h", cfg.speedStops != null,
+                    { v -> upd { it.copy(speedStops = if (v) apexled.safety.DefaultSpeedStops.stops else null, speedFlashKmh = if (v) it.speedFlashKmh else null) } },
+                    hint = "Desligado: usa as faixas do PWM como % do limite. Ligado: você escolhe a cor em cada velocidade.")
+                cfg.speedStops?.let { stops ->
+                    val maxKmh = (profile.maxSpeedKmh * 1.2f).coerceAtLeast(30f)
+                    val kmh: (Float) -> String = { String.format(Locale.US, "%.0f km/h", it) }
+                    SafetyMeter(stops.map { ColorStop(it.at / maxKmh, it.color) }, null)
+                    stops.sortedBy { it.at }.forEachIndexed { i, stop ->
+                        StopRow(stop,
+                            onChange = { n -> upd { c -> c.copy(speedStops = c.speedStops!!.sortedBy { it.at }.toMutableList().also { it[i] = n }) } },
+                            onDelete = if (stops.size > 2) ({ upd { c -> c.copy(speedStops = c.speedStops!!.sortedBy { it.at }.filterIndexed { j, _ -> j != i }) } }) else null,
+                            range = 0f..maxKmh, format = kmh)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        BigButton("Adicionar faixa", { upd { c -> c.copy(speedStops = c.speedStops!! + ColorStop(maxKmh * 0.8f, Rgb(255, 0, 0))) } }, Modifier.weight(1f), primary = false)
+                        BigButton("Restaurar padrão", { upd { c -> c.copy(speedStops = apexled.safety.DefaultSpeedStops.stops) } }, Modifier.weight(1f), primary = false)
+                    }
+                    val flash = cfg.speedFlashKmh ?: (cfg.speedLimitKmh ?: (profile.tiltbackSpeedKmh.takeIf { it > 0f } ?: profile.maxSpeedKmh))
+                    LabeledSlider("Pisca rápido a partir de", flash, 10f..maxKmh, { v -> upd { it.copy(speedFlashKmh = v) } }, kmh(flash))
+                }
+            }
             if (cfg.mode == SafetyMode.COMBINED) SwitchRow("Considerar bateria baixa", cfg.batteryFactor, { v -> upd { it.copy(batteryFactor = v) } })
         }
 
@@ -128,7 +150,7 @@ fun SafetyScreen(graph: AppGraph) {
         SectionCard("Perfil da roda", "Valores iniciais são palpites — ajuste para a sua roda.") {
             ChipRow(settings.profiles, profile, { it.name }, { p -> graph.update { it.copy(activeProfileId = p.id) } })
             SwitchRow("Detectar pelo modelo informado pela roda", settings.autoDetectProfile, { v -> graph.update { it.copy(autoDetectProfile = v) } },
-                hint = "Só o protocolo Veteran/Nosfet informa o modelo.")
+                hint = "Leaperkim/Nosfet, Kingsong e Inmotion informam o modelo.")
             BigButton(if (editProfile) "Fechar edição" else "Editar perfil", { editProfile = !editProfile }, Modifier.fillMaxWidth(), primary = false)
             if (editProfile) ProfileEditor(profile, ::updProfile, graph)
         }
@@ -200,12 +222,16 @@ fun SafetyScreen(graph: AppGraph) {
 }
 
 @Composable
-private fun StopRow(stop: ColorStop, onChange: (ColorStop) -> Unit, onDelete: (() -> Unit)?) {
+private fun StopRow(
+    stop: ColorStop, onChange: (ColorStop) -> Unit, onDelete: (() -> Unit)?,
+    range: ClosedFloatingPointRange<Float> = 0f..1f,
+    format: (Float) -> String = { String.format(Locale.US, "%.0f%%", it * 100) },
+) {
     var pick by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(40.dp).clip(CircleShape).background(stop.color.toColor()).clickable { pick = true })
         Column(Modifier.weight(1f)) {
-            LabeledSlider("Em", stop.at, 0f..1f, { onChange(stop.copy(at = it)) }, String.format(Locale.US, "%.0f%%", stop.at * 100))
+            LabeledSlider("Em", stop.at, range, { onChange(stop.copy(at = it)) }, format(stop.at))
         }
         if (onDelete != null) BigButton("✕", onDelete, Modifier.size(56.dp), primary = false)
     }
