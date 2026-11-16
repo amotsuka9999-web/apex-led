@@ -1,5 +1,7 @@
 package apexled.app.ui.screens
 
+import androidx.compose.material3.TextButton
+import apexled.app.ui.components.PresetRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -224,17 +226,15 @@ fun SafetyScreen(graph: AppGraph) {
 
         SectionCard("Extras") {
             SwitchRow("Pulso lento quando parado", cfg.restPulse.enabled, { v -> upd { it.copy(restPulse = it.restPulse.copy(enabled = v)) } })
-            SwitchRow("Cor fixa em baixa velocidade", cfg.fixedColor.enabled, { v -> upd { it.copy(fixedColor = it.fixedColor.copy(enabled = v)) } },
-                hint = "Só vale enquanto houver folga (uso abaixo de 60%).")
+            SwitchRow("Cor de repouso (parado/devagar)", cfg.fixedColor.enabled, { v -> upd { it.copy(fixedColor = it.fixedColor.copy(enabled = v)) } },
+                hint = "Parado ou devagar, a fita fica nesta cor em vez do verde. Ao acelerar, volta à cor da segurança.")
             if (cfg.fixedColor.enabled) {
-                LabeledSlider("Abaixo de", cfg.fixedColor.belowKmh, 1f..20f, { v -> upd { it.copy(fixedColor = it.fixedColor.copy(belowKmh = v)) } },
-                    String.format(Locale.US, "%.0f km/h", cfg.fixedColor.belowKmh))
+                PresetRow(cfg.fixedColor.color) { c -> upd { it.copy(fixedColor = it.fixedColor.copy(color = c)) } }
                 var pick by remember { mutableStateOf(false) }
-                Row(Modifier.fillMaxWidth().clickable { pick = true }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(36.dp).clip(CircleShape).background(cfg.fixedColor.color.toColor()))
-                    Text("Cor fixa", style = MaterialTheme.typography.bodyLarge)
-                }
+                TextButton({ pick = true }) { Text("Outra cor…") }
                 if (pick) ColorPickDialog(cfg.fixedColor.color, { c -> upd { it.copy(fixedColor = it.fixedColor.copy(color = c)) }; pick = false }, { pick = false })
+                LabeledSlider("Vale abaixo de", cfg.fixedColor.belowKmh, 1f..20f, { v -> upd { it.copy(fixedColor = it.fixedColor.copy(belowKmh = v)) } },
+                    String.format(Locale.US, "%.0f km/h", cfg.fixedColor.belowKmh))
             }
             SwitchRow("Flash de freio (regeneração forte)", cfg.brake.enabled, { v -> upd { it.copy(brake = it.brake.copy(enabled = v)) } },
                 hint = "Detecta por desaceleração ou corrente negativa. Em Gotway/Veteran a corrente de bateria é estimada: prefira testar.")

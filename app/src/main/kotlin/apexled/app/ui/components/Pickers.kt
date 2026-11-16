@@ -43,6 +43,7 @@ fun Swatch(color: Rgb, selected: Boolean = false, size: Int = 44, onClick: () ->
 
 @Composable
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+/** Cores rápidas: vermelho, laranja, amarelo, lima, verde, verde-água, ciano, azul-claro, azul, roxo, rosa, branco. */
 fun PresetRow(selected: Rgb?, onPick: (Rgb) -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PresetColors.forEach { c -> Swatch(c, selected == c) { onPick(c) } }

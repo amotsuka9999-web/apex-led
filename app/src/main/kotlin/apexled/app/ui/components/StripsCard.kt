@@ -158,16 +158,9 @@ private fun StripEditor(cfg: StripConfig, update: ((StripConfig) -> StripConfig)
         Text(cfg.show.hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
         when (cfg.show) {
-            StripShow.COLOR -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                QUICK.forEach { c ->
-                    Box(
-                        Modifier.size(30.dp).clip(CircleShape).background(c.toColor())
-                            .border(2.dp, if (c == cfg.color) MaterialTheme.colorScheme.onSurface else Color.Transparent, CircleShape)
-                            .clickable { update { it.copy(color = c) } },
-                    )
-                }
-                Box(Modifier.size(30.dp).clip(CircleShape).border(1.dp, MaterialTheme.colorScheme.outline, CircleShape).clickable { pickColor = true },
-                    contentAlignment = Alignment.Center) { Text("+") }
+            StripShow.COLOR -> {
+                PresetRow(cfg.color) { c -> update { it.copy(color = c) } }
+                TextButton({ pickColor = true }) { Text("Outra cor…") }
             }
             StripShow.EFFECT -> {
                 val fx = Sp621eEffects.all.firstOrNull { it.id == cfg.effectId }
