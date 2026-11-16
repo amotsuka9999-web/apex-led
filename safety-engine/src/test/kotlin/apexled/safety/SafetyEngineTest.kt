@@ -28,6 +28,15 @@ class SafetyEngineTest {
     private fun SafetyEngine.step(t: Telemetry?, now: Long, cfg: SafetyConfig = pwmOnly, p: WheelProfile = profile) =
         update(t, now, p, cfg)
 
+    @Test fun restTransitionBetweenTwoColors() {
+        val cyan = Rgb(0, 210, 255); val purple = Rgb(170, 0, 255)
+        val f = FixedColorConfig(enabled = true, color = cyan, color2 = purple, periodMs = 4000)
+        assertEquals(cyan, f.colorAt(0))
+        assertEquals(purple, f.colorAt(2000))
+        val cfg = pwmOnly.copy(fixedColor = f)
+        assertEquals(purple, SafetyEngine().step(tel(2000, pwm = 0.1f, speed = 1f), 2000, cfg).frame.color)
+    }
+
     // ---- escala própria de velocidade (km/h) ---------------------------------------------
 
     private val speedCfg = SafetyConfig(

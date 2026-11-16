@@ -229,10 +229,25 @@ fun SafetyScreen(graph: AppGraph) {
             SwitchRow("Cor de repouso (parado/devagar)", cfg.fixedColor.enabled, { v -> upd { it.copy(fixedColor = it.fixedColor.copy(enabled = v)) } },
                 hint = "Parado ou devagar, a fita fica nesta cor em vez do verde. Ao acelerar, volta à cor da segurança.")
             if (cfg.fixedColor.enabled) {
-                PresetRow(cfg.fixedColor.color) { c -> upd { it.copy(fixedColor = it.fixedColor.copy(color = c)) } }
-                var pick by remember { mutableStateOf(false) }
-                TextButton({ pick = true }) { Text("Outra cor…") }
-                if (pick) ColorPickDialog(cfg.fixedColor.color, { c -> upd { it.copy(fixedColor = it.fixedColor.copy(color = c)) }; pick = false }, { pick = false })
+                val fc = cfg.fixedColor
+                val two = fc.color2 != null
+                ChipRow(listOf(false, true), two, { if (it) "Transição de 2 cores" else "Uma cor" },
+                    { v -> upd { it.copy(fixedColor = it.fixedColor.copy(color2 = if (v) (it.fixedColor.color2 ?: Rgb(170, 0, 255)) else null)) } })
+                if (two) Text("Cor 1", style = MaterialTheme.typography.labelLarge)
+                PresetRow(fc.color) { c -> upd { it.copy(fixedColor = it.fixedColor.copy(color = c)) } }
+                var pick by remember { mutableStateOf(0) }
+                TextButton({ pick = 1 }) { Text("Outra cor…") }
+                if (two) {
+                    Text("Cor 2", style = MaterialTheme.typography.labelLarge)
+                    PresetRow(fc.color2) { c -> upd { it.copy(fixedColor = it.fixedColor.copy(color2 = c)) } }
+                    TextButton({ pick = 2 }) { Text("Outra cor…") }
+                    LabeledSlider("Tempo da transição", fc.periodMs / 1000f, 1f..15f,
+                        { v -> upd { it.copy(fixedColor = it.fixedColor.copy(periodMs = (v * 1000).toLong())) } },
+                        String.format(Locale.US, "%.0f s", fc.periodMs / 1000f), hint = "Ida e volta entre as duas cores, suave.")
+                }
+                if (pick != 0) ColorPickDialog(if (pick == 1) fc.color else fc.color2 ?: fc.color, { c ->
+                    upd { it.copy(fixedColor = if (pick == 1) it.fixedColor.copy(color = c) else it.fixedColor.copy(color2 = c)) }; pick = 0
+                }, { pick = 0 })
                 LabeledSlider("Vale abaixo de", cfg.fixedColor.belowKmh, 1f..20f, { v -> upd { it.copy(fixedColor = it.fixedColor.copy(belowKmh = v)) } },
                     String.format(Locale.US, "%.0f km/h", cfg.fixedColor.belowKmh))
             }

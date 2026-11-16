@@ -104,7 +104,7 @@ class SafetyEngine {
 
         // Cor fixa em baixa velocidade: só quando há folga.
         if (config.fixedColor.enabled && telemetry.speedKmh < config.fixedColor.belowKmh && usage < ATTENTION_AT) {
-            color = config.fixedColor.color
+            color = config.fixedColor.colorAt(nowMs)
         }
         // Pulso lento parado.
         if (config.restPulse.enabled && telemetry.speedKmh < config.restPulse.belowKmh && !flashOn) {

@@ -86,12 +86,25 @@ data class RestPulseConfig(
     val minBrightnessFraction: Float = 0.35f,
 )
 
-/** Cor fixa abaixo de uma velocidade (só vale enquanto o uso estiver abaixo do "atenção"). */
+/**
+ * Cor de repouso: parado ou devagar (e enquanto a roda não conecta). Com [color2], a fita faz uma
+ * transição suave entre as duas cores (ex.: ciano ↔ roxo) a cada [periodMs].
+ */
 data class FixedColorConfig(
     val enabled: Boolean = false,
     val belowKmh: Float = 5f,
-    val color: Rgb = Rgb(0, 120, 255),
-)
+    val color: Rgb = Rgb(0, 210, 255),
+    val color2: Rgb? = null,
+    val periodMs: Long = 4000,
+) {
+    /** Cor neste instante (transição em seno entre as duas, ida e volta). */
+    fun colorAt(nowMs: Long): Rgb {
+        val b = color2 ?: return color
+        val p = periodMs.coerceAtLeast(400)
+        val t = 0.5f - 0.5f * kotlin.math.cos((2.0 * kotlin.math.PI * (nowMs % p) / p).toFloat())
+        return Rgb.lerp(color, b, t)
+    }
+}
 
 /** Flash branco quando a regeneração é forte (frenagem). */
 data class BrakeConfig(

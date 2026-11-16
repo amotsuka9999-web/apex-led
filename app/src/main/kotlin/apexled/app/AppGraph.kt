@@ -405,10 +405,10 @@ class AppGraph(private val context: Context) {
                 if (overlay != null) { c.applyFrame(overlay); applied[c] = "overlay"; continue }
                 when (cfg.show) {
                     StripShow.SAFETY -> {
-                        val rest = set.safety.fixedColor.takeIf { set.safety.enabled && it.enabled }?.color
+                        val rest = set.safety.fixedColor.takeIf { set.safety.enabled && it.enabled }?.colorAt(now)
                         when {
                             safetyFrame != null -> { c.applyFrame(safetyFrame); applied[c] = "safety" }
-                            // segurança ligada, mas sem roda: fica na cor de repouso escolhida (não apaga, não fica verde)
+                            // segurança ligada, mas sem roda: fica no repouso escolhido (não apaga, não fica verde)
                             rest != null -> {
                                 val key = "rest:$rest:$level"
                                 if (applied[c] != key) { c.applyFrame(LedFrame(rest, (255 * level).toInt())); applied[c] = key }

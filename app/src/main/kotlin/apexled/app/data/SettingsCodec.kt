@@ -203,6 +203,7 @@ object SettingsCodec {
         put("faultStyle", c.fault.style.name); put("faultColor", rgb(c.fault.color)); put("faultPeriodMs", c.fault.periodMs)
         put("restPulse", c.restPulse.enabled); put("restBelow", c.restPulse.belowKmh.toDouble())
         put("fixedColor", c.fixedColor.enabled); put("fixedBelow", c.fixedColor.belowKmh.toDouble()); put("fixedRgb", rgb(c.fixedColor.color))
+        put("fixedRgb2", c.fixedColor.color2?.let { rgb(it) } ?: JSONObject.NULL); put("fixedPeriodMs", c.fixedColor.periodMs)
         put("brake", c.brake.enabled); put("brakeRegenA", c.brake.regenCurrentA.toDouble()); put("brakeDecel", c.brake.decelKmhPerS.toDouble())
     }
 
@@ -230,7 +231,10 @@ object SettingsCodec {
             batteryFilterSeconds = f("batteryFilterSeconds", d.batteryFilterSeconds).coerceIn(0f, 30f),
             fault = FaultConfig(enumOr(o.optString("faultStyle"), d.fault.style), rgb(o.optJSONArray("faultColor"), d.fault.color), o.optLong("faultPeriodMs", d.fault.periodMs).coerceIn(300L, 5000L)),
             restPulse = RestPulseConfig(o.optBoolean("restPulse", false), f("restBelow", d.restPulse.belowKmh)),
-            fixedColor = FixedColorConfig(o.optBoolean("fixedColor", false), f("fixedBelow", d.fixedColor.belowKmh), rgb(o.optJSONArray("fixedRgb"), d.fixedColor.color)),
+            fixedColor = FixedColorConfig(
+                o.optBoolean("fixedColor", false), f("fixedBelow", d.fixedColor.belowKmh), rgb(o.optJSONArray("fixedRgb"), d.fixedColor.color),
+                o.optJSONArray("fixedRgb2")?.let { rgb(it, Rgb(170, 0, 255)) }, o.optLong("fixedPeriodMs", d.fixedColor.periodMs).coerceIn(400, 20_000),
+            ),
             brake = BrakeConfig(o.optBoolean("brake", false), f("brakeRegenA", d.brake.regenCurrentA), f("brakeDecel", d.brake.decelKmhPerS)),
         )
     }
