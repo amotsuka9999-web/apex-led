@@ -113,6 +113,10 @@ class AppGraph(private val context: Context) {
     val ledName: StateFlow<String?> = _led.flatMapLatest { it.deviceName }.stateIn(scope, SharingStarted.Eagerly, null)
     val gattRssi get() = gattLed.rssi
 
+    /** Último erro de conexão da fita ligada a este controlador (para mostrar na lista). */
+    fun ledError(c: LedController): StateFlow<String?> =
+        _extraLeds.value.firstOrNull { it.controller === c }?.gatt?.lastError ?: gattLed.lastError
+
     private val _notices = MutableStateFlow<String?>(null)
     /** Último aviso para o usuário (ex.: comando do SP621E sem protocolo conhecido). */
     val notice: StateFlow<String?> = _notices.asStateFlow()

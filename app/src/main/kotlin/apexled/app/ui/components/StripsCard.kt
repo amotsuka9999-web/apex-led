@@ -73,6 +73,16 @@ fun StripsCard(graph: AppGraph, hasPerm: Boolean, onAdd: () -> Unit) {
             val st by ctrl.state.collectAsState()
             val address = if (key == primaryKey) null else key
             StripRow(name, cfg, st, if (settings.ledSimulated) LedLinkState.CONNECTED else link, open == key) { open = if (open == key) null else key }
+            val err by graph.ledError(ctrl).collectAsState()
+            if (!settings.ledSimulated && link != LedLinkState.CONNECTED) {
+                Text(
+                    when (link) {
+                        LedLinkState.DISCONNECTED -> "Desconectada" + (err?.let { " · $it" } ?: "")
+                        else -> "Conectando…" + (err?.let { " · último erro: $it" } ?: "")
+                    },
+                    Modifier.padding(start = 64.dp), style = MaterialTheme.typography.labelMedium, color = WarnAmber,
+                )
+            }
             AnimatedVisibility(open == key) {
                 StripEditor(cfg, { f -> graph.updateStrip(address, f) },
                     onRemove = address?.let { a -> { graph.removeExtraLed(a); open = null } })
