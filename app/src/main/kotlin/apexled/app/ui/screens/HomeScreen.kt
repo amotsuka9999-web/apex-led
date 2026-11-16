@@ -1,5 +1,7 @@
 package apexled.app.ui.screens
 
+import apexled.app.data.TurnSide
+import apexled.app.data.LedSide
 import androidx.compose.ui.Alignment
 import apexled.led.FanoutLedController
 import android.Manifest
@@ -106,6 +108,10 @@ fun HomeScreen(graph: AppGraph) {
             }
         }
 
+        SectionCard("Setas", "Piscam âmbar nas fitas do lado e no capacete; desligam sozinhas em ${settings.turnSignalSeconds} s.") {
+            TurnSignalRow(graph)
+        }
+
         // ---- Fita --------------------------------------------------------------------------
         SectionCard("Fita LED (SP621E)") {
             if (settings.technicalMode || settings.ledSimulated) SwitchRow("Fita simulada (sem Bluetooth)", settings.ledSimulated, { graph.setLedSimulated(it) },
@@ -135,9 +141,14 @@ fun HomeScreen(graph: AppGraph) {
 
                 // ---- grupo: até 10 fitas com a mesma configuração (como no BanlanX) ----
                 if (settings.ledAddress != null) {
+                    Text("Posição desta fita", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    ChipRow(LedSide.entries, settings.ledSide, { it.label }, { v -> graph.update { it.copy(ledSide = v) } })
                     Text("Grupo: ${1 + extras.size} de ${FanoutLedController.MAX_DEVICES} fitas. Todas recebem os mesmos comandos.",
                         style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    extras.forEach { e -> ExtraLedRow(e) { graph.removeExtraLed(e.address) } }
+                    extras.forEach { e ->
+                        val side = settings.extraLeds.firstOrNull { it.address == e.address }?.side ?: LedSide.BOTH
+                        ExtraLedRow(e, side, { v -> graph.setExtraSide(e.address, v) }) { graph.removeExtraLed(e.address) }
+                    }
                     if (1 + extras.size < FanoutLedController.MAX_DEVICES) BigButton("Adicionar outra fita",
                         { addingExtra = true; scan = ScanTarget.LED }, Modifier.fillMaxWidth(), primary = false, enabled = hasPerm)
                     if (extras.size >= 6) Text("Muitos celulares Android só mantêm ~7 conexões Bluetooth ao mesmo tempo.",
@@ -265,7 +276,7 @@ private fun Tile(label: String, value: String, unit: String, modifier: Modifier 
 }
 
 @Composable
-private fun ExtraLedRow(e: AppGraph.ExtraLed, onRemove: () -> Unit) {
+private fun ExtraLedRow(e: AppGraph.ExtraLed, side: LedSide, onSide: (LedSide) -> Unit, onRemove: () -> Unit) {
     val link by e.link.collectAsState()
     val rssi by e.rssi.collectAsState()
     val (t, c) = when (link) {
@@ -282,5 +293,17 @@ private fun ExtraLedRow(e: AppGraph.ExtraLed, onRemove: () -> Unit) {
             }
         }
         BigButton("Remover", onRemove, primary = false)
+    }
+    ChipRow(LedSide.entries, side, { it.label }, onSide)
+}
+
+/** Botões de seta e pisca-alerta (também no relógio). */
+@Composable
+fun TurnSignalRow(graph: AppGraph) {
+    val turn by graph.turn.collectAsState()
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        BigButton("◀ Esquerda", { graph.signal(TurnSide.LEFT) }, Modifier.weight(1f), primary = turn?.side == TurnSide.LEFT)
+        BigButton("⚠", { graph.signal(TurnSide.HAZARD) }, Modifier.weight(0.6f), primary = turn?.side == TurnSide.HAZARD)
+        BigButton("Direita ▶", { graph.signal(TurnSide.RIGHT) }, Modifier.weight(1f), primary = turn?.side == TurnSide.RIGHT)
     }
 }

@@ -9,6 +9,8 @@ import apexled.core.LedCommand
 import apexled.core.LedController
 import apexled.core.LedLinkState
 import apexled.core.LedState
+import apexled.core.LedFrame
+import apexled.core.Rgb
 import apexled.core.SourceKind
 import apexled.core.SourceStatus
 import apexled.core.Telemetry
@@ -29,6 +31,10 @@ import apexled.safety.SafetyOutput
 import apexled.wheel.AutoDecoder
 import apexled.led.FanoutLedController
 import apexled.app.data.SavedLed
+import apexled.app.extras.TripRecorder
+import apexled.app.extras.VoiceAlerts
+import apexled.app.data.LedSide
+import apexled.app.data.TurnSide
 import apexled.wheel.InmotionV1Decoder
 import apexled.wheel.InmotionV2Decoder
 import apexled.wheel.KingsongDecoder
@@ -154,6 +160,21 @@ class AppGraph(private val context: Context) {
         ConnectionService.sync(context, this)
     }
 
+    fun setExtraSide(address: String, side: LedSide) =
+        update { it.copy(extraLeds = it.extraLeds.map { e -> if (e.address == address) e.copy(side = side) else e }) }
+
+    /** Backup: todas as configurações em JSON. */
+    fun exportSettings(): String = apexled.app.data.SettingsCodec.encode(_settings.value)
+
+    /** Restaura um backup; false se o arquivo não for um backup válido. */
+    fun importSettings(json: String): Boolean {
+        val ok = runCatching { org.json.JSONObject(json).has("profiles") }.getOrDefault(false)
+        if (!ok) return false
+        val restored = apexled.app.data.SettingsCodec.decode(json)
+        update { restored.copy(disclaimerAccepted = true) }
+        return true
+    }
+
     fun removeExtraLed(address: String) {
         _extraLeds.value.firstOrNull { it.address == address }?.gatt?.disconnect()
         _extraLeds.value = _extraLeds.value.filter { it.address != address }
@@ -223,10 +244,12 @@ class AppGraph(private val context: Context) {
         if (src == null) return
         _source.value = src
         src.start()
+        if (s.tripLog) tripRecorder = runCatching { TripRecorder(context) }.getOrNull()
         ConnectionService.sync(context, this)
     }
 
     fun stopSource() {
+        tripRecorder?.close(); tripRecorder = null
         _source.value?.stop()
         _source.value = null
         simulator = null
@@ -274,24 +297,102 @@ class AppGraph(private val context: Context) {
     private var manualSnapshot: LedState? = null
     private var driving = false
 
+    // ---- setas -------------------------------------------------------------------------------
+
+    @Volatile private var tripRecorder: TripRecorder? = null
+    private var voice: VoiceAlerts? = null
+
+    private val brakeDetector = BrakeDetector()
+
+    data class TurnState(val side: TurnSide, val untilMs: Long)
+    private val _turn = MutableStateFlow<TurnState?>(null)
+    /** Seta ligada agora (null = nenhuma). */
+    val turn: StateFlow<TurnState?> = _turn.asStateFlow()
+    private var turnSnapshot: LedState? = null
+
+    /** Liga a seta (ou troca de lado); a mesma seta de novo, ou null, desliga. */
+    fun signal(side: TurnSide?) {
+        val cur = _turn.value
+        _turn.value = if (side == null || cur?.side == side) null
+        else TurnState(side, clock.nowMs() + _settings.value.turnSignalSeconds.coerceIn(2, 120) * 1000L)
+    }
+
+    /** Fitas com o lado de cada uma (a principal é a primeira). */
+    private fun targets(): List<Pair<LedController, LedSide>> {
+        val c = _led.value
+        val s = _settings.value
+        if (c !is FanoutLedController) return listOf(c to s.ledSide)
+        return listOf(c.primary to s.ledSide) + _extraLeds.value.map { e ->
+            e.controller to (s.extraLeds.firstOrNull { it.address == e.address }?.side ?: LedSide.BOTH)
+        }
+    }
+
+    private fun blinks(turn: TurnSide, side: LedSide) = when (side) {
+        LedSide.BOTH -> true
+        LedSide.HELMET, LedSide.WHEEL -> turn == TurnSide.HAZARD
+        LedSide.LEFT -> turn != TurnSide.RIGHT
+        LedSide.RIGHT -> turn != TurnSide.LEFT
+    }
+
+    private fun dimmed(f: LedFrame, level: Float) = if (level >= 0.999f) f else f.copy(brightness = (f.brightness * level).toInt())
+
     private suspend fun safetyLoop() {
         while (scope.isActive) {
             delay(TICK_MS)
+            val now = clock.nowMs()
             val set = _settings.value
             val src = _source.value
+            val level = set.dayNight.levelAt(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))
             val active = set.safety.enabled && src != null && sourceStatus.value !is SourceStatus.Idle
+
+            // seta: expira sozinha
+            var turn = _turn.value
+            if (turn != null && now >= turn.untilMs) { _turn.value = null; turn = null }
+            val wasTurning = turnSnapshot != null
+            if (turn != null && !wasTurning) turnSnapshot = _led.value.state.value
+
+            var safetyFrame: LedFrame? = null
             if (active) {
                 val controller = _led.value
-                if (!driving) { manualSnapshot = controller.state.value; driving = true; engine.reset() }
-                val out = engine.update(telemetry.value, clock.nowMs(), set.activeProfile, set.safety)
+                if (!driving) { manualSnapshot = turnSnapshot ?: controller.state.value; driving = true; engine.reset() }
+                val out = engine.update(telemetry.value, now, set.activeProfile, set.safety)
                 _safety.value = out
-                controller.applyFrame(out.frame)
+                safetyFrame = dimmed(out.frame, level)
             } else if (driving) {
                 driving = false
                 _safety.value = null
                 engine.reset()
-                manualSnapshot?.let { restoreManual(_led.value, it) }
+                if (turn == null) manualSnapshot?.let { restoreManual(_led.value, it) }
             }
+
+            // Capacete = luz de freio: vermelho fraco (lanterna) e forte ao frear, sempre que a roda estiver conectada.
+            val wheelOn = src != null && sourceStatus.value is SourceStatus.Connected
+            val braking = wheelOn && brakeDetector.update(telemetry.value, now, set.safety.brake)
+            val helmetFrame = if (wheelOn) LedFrame(Rgb(255, 0, 0), ((if (braking) 255 else TAIL_LEVEL) * level).toInt()) else null
+            val targets = targets()
+            val hasHelmet = targets.any { it.second == LedSide.HELMET }
+
+            if (turn != null || hasHelmet) {
+                // pisca âmbar ~1,4 Hz no lado pedido; as outras fitas seguem a segurança (ou ficam como estão)
+                val on = (now % TURN_PERIOD_MS) < TURN_PERIOD_MS / 2
+                val amber = LedFrame(TURN_COLOR, if (on) (255 * level).toInt() else 0)
+                targets.forEach { (c, side) ->
+                    val f = when {
+                        turn != null && blinks(turn.side, side) -> amber
+                        side == LedSide.HELMET -> helmetFrame ?: safetyFrame
+                        else -> safetyFrame
+                    }
+                    f?.let { c.applyFrame(it) }
+                }
+            } else safetyFrame?.let { _led.value.applyFrame(it) }
+
+            if (turn == null && wasTurning) {
+                val snap = turnSnapshot
+                turnSnapshot = null
+                if (safetyFrame == null) snap?.let { st -> targets.forEach { (c, side) -> if (side != LedSide.HELMET || helmetFrame == null) restoreManual(c, st) } }
+            }
+            tripRecorder?.onTick(now, telemetry.value, _safety.value)
+            voice?.onTick(now, telemetry.value, sourceStatus.value, set.voice)
         }
     }
 
@@ -310,11 +411,12 @@ class AppGraph(private val context: Context) {
             if (!s.ledSimulated && s.ledAddress != null && BlePermissions.hasAll(context)) connectLed(s.ledAddress, s.ledName)
             _settings.drop(1).debounce(600).collect { repo.save(it) }
         }
+        voice = VoiceAlerts(context) { msg -> _notices.value = msg }
         scope.launch { safetyLoop() }
         // guarda o estado manual da fita nas configurações (só quando a segurança não está controlando)
         scope.launch {
             ledState.debounce(800).collect { st ->
-                if (!driving && _loaded.value) update { it.copy(led = st.copy(bar = null)) }
+                if (!driving && turnSnapshot == null && _loaded.value) update { it.copy(led = st.copy(bar = null)) }
             }
         }
     }
@@ -324,5 +426,29 @@ class AppGraph(private val context: Context) {
     companion object {
         /** Ciclo do motor de segurança: 50 ms = 20 atualizações por segundo na fita. */
         const val TICK_MS = 50L
+        const val TURN_PERIOD_MS = 700L
+        /** Brilho da lanterna do capacete sem frear (0..255). */
+        const val TAIL_LEVEL = 45
+        val TURN_COLOR = Rgb(255, 140, 0)
+    }
+}
+
+/** Detecta frenagem pela corrente de regeneração ou pela desaceleração (limites de [BrakeConfig]). */
+private class BrakeDetector {
+    private var prevTs = -1L
+    private var prevSpeed = 0f
+    private var holdUntil = 0L
+
+    fun update(t: Telemetry?, now: Long, cfg: apexled.safety.BrakeConfig): Boolean {
+        if (t != null && t.timestampMs != prevTs) {
+            var hit = (t.currentA ?: 0f) <= -cfg.regenCurrentA
+            if (prevTs >= 0) {
+                val dt = (t.timestampMs - prevTs) / 1000f
+                if (dt in 0.03f..0.6f && (prevSpeed - t.speedKmh) / dt >= cfg.decelKmhPerS) hit = true
+            }
+            prevTs = t.timestampMs; prevSpeed = t.speedKmh
+            if (hit) holdUntil = now + cfg.holdMs.coerceAtLeast(400)
+        }
+        return now < holdUntil
     }
 }

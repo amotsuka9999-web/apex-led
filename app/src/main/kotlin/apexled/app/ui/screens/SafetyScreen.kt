@@ -146,6 +146,34 @@ fun SafetyScreen(graph: AppGraph) {
             if (cfg.mode == SafetyMode.COMBINED) SwitchRow("Considerar bateria baixa", cfg.batteryFactor, { v -> upd { it.copy(batteryFactor = v) } })
         }
 
+        // ---- brilho dia/noite e voz ---------------------------------------------------------
+        SectionCard("Brilho dia/noite", "Vale para a segurança e as setas (as cores manuais ficam como você escolheu).") {
+            val dn = settings.dayNight
+            fun updDn(f: (apexled.app.data.DayNightConfig) -> apexled.app.data.DayNightConfig) = graph.update { it.copy(dayNight = f(it.dayNight)) }
+            SwitchRow("Brilho automático pelo horário", dn.enabled, { v -> updDn { it.copy(enabled = v) } })
+            if (dn.enabled) {
+                LabeledSlider("Dia começa às", dn.dayStartsHour.toFloat(), 0f..23f, { v -> updDn { it.copy(dayStartsHour = v.toInt()) } }, "${dn.dayStartsHour}h")
+                LabeledSlider("Noite começa às", dn.nightStartsHour.toFloat(), 0f..23f, { v -> updDn { it.copy(nightStartsHour = v.toInt()) } }, "${dn.nightStartsHour}h")
+                LabeledSlider("Brilho de dia", dn.dayLevel, 0.05f..1f, { v -> updDn { it.copy(dayLevel = v) } }, String.format(Locale.US, "%.0f%%", dn.dayLevel * 100))
+                LabeledSlider("Brilho de noite", dn.nightLevel, 0.05f..1f, { v -> updDn { it.copy(nightLevel = v) } }, String.format(Locale.US, "%.0f%%", dn.nightLevel * 100),
+                    hint = "À noite a fita forte ofusca você e quem vem atrás.")
+            }
+        }
+
+        SectionCard("Alertas de voz", "Saem no fone Bluetooth, se estiver conectado ao celular.") {
+            val vc = settings.voice
+            fun updV(f: (apexled.app.data.VoiceConfig) -> apexled.app.data.VoiceConfig) = graph.update { it.copy(voice = f(it.voice)) }
+            SwitchRow("Falar os avisos", vc.enabled, { v -> updV { it.copy(enabled = v) } },
+                hint = "PWM em ${vc.pwmSteps.joinToString(", ") { "${(it * 100).toInt()}%" }}; bateria da roda em ${vc.batterySteps.joinToString(", ") { "$it%" }}.")
+            if (vc.enabled) {
+                SwitchRow("Avisar sinal da roda perdido", vc.signalLost, { v -> updV { it.copy(signalLost = v) } })
+                LabeledSlider("Avisar bateria do celular abaixo de", vc.phoneBatteryBelow.toFloat(), 0f..50f, { v -> updV { it.copy(phoneBatteryBelow = v.toInt()) } },
+                    if (vc.phoneBatteryBelow == 0) "desligado" else "${vc.phoneBatteryBelow}%", hint = "Se o celular desligar, as luzes de segurança param.")
+                LabeledSlider("Seta desliga sozinha em", settings.turnSignalSeconds.toFloat(), 2f..60f,
+                    { v -> graph.update { it.copy(turnSignalSeconds = v.toInt()) } }, "${settings.turnSignalSeconds} s")
+            }
+        }
+
         // ---- perfil -----------------------------------------------------------------------
         SectionCard("Perfil da roda", "Valores iniciais são palpites — ajuste para a sua roda.") {
             ChipRow(settings.profiles, profile, { it.name }, { p -> graph.update { it.copy(activeProfileId = p.id) } })

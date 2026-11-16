@@ -38,6 +38,14 @@ class WearBridge(private val context: Context, private val graph: AppGraph) {
                 val on = data.firstOrNull()?.toInt() == 1
                 graph.update { it.copy(safety = it.safety.copy(enabled = on)) }
             }
+            WearPaths.TURN -> graph.signal(
+                when (data.firstOrNull()?.toInt()) {
+                    1 -> apexled.app.data.TurnSide.LEFT
+                    2 -> apexled.app.data.TurnSide.RIGHT
+                    3 -> apexled.app.data.TurnSide.HAZARD
+                    else -> null
+                } ?: graph.turn.value?.side, // 0 = desligar: repetir o lado atual desliga
+            )
             WearPaths.COLOR -> if (data.size >= 3) manual {
                 val c = Rgb(data[0].toInt() and 0xFF, data[1].toInt() and 0xFF, data[2].toInt() and 0xFF)
                 val led = graph.led.value
@@ -107,6 +115,7 @@ class WearBridge(private val context: Context, private val graph: AppGraph) {
             .put("critical", out?.level == SafetyLevel.CRITICAL || out?.flashing == true)
             .put("color", JSONArray().put(color.r).put(color.g).put(color.b))
             .put("presets", JSONArray(PRESETS))
+            .put("turn", graph.turn.value?.side?.name ?: JSONObject.NULL)
     }
 
     companion object {
@@ -124,4 +133,5 @@ object WearPaths {
     const val COLOR = "/apexled/color"
     const val PRESET = "/apexled/preset"
     const val STATE = "/apexled/state"
+    const val TURN = "/apexled/turn"
 }

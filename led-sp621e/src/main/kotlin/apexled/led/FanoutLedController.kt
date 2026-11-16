@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
  * mostrados são os da principal; o estado de cada extra fica em [others].
  */
 class FanoutLedController(
-    private val primary: LedController,
+    val primary: LedController,
     private val others: () -> List<LedController>,
 ) : LedController {
     override val link: StateFlow<LedLinkState> get() = primary.link

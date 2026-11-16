@@ -31,6 +31,8 @@ data class WatchState(
     val critical: Boolean = false,
     val ledColor: Color = Color(0xFF333333),
     val presets: List<String> = DEFAULT_PRESETS,
+    /** LEFT, RIGHT, HAZARD ou null. */
+    val turn: String? = null,
 )
 
 val DEFAULT_PRESETS = listOf("Arco-íris", "Fogo vermelho/amarelo", "Cometa azul", "Onda vermelho-azul", "Respiração verde", "Arco-íris estrelas")
@@ -39,7 +41,7 @@ val DEFAULT_PRESETS = listOf("Arco-íris", "Fogo vermelho/amarelo", "Cometa azul
  * Conversa com o app do celular pela Wearable Data Layer (MessageClient). Os caminhos são os mesmos de
  * `apexled.app.wear.WearPaths` no celular.
  */
-class PhoneLink(context: Context) : MessageClient.OnMessageReceivedListener {
+class PhoneLink(private val context: Context) : MessageClient.OnMessageReceivedListener {
     private val messages = Wearable.getMessageClient(context)
     private val nodes = Wearable.getNodeClient(context)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -80,6 +82,14 @@ class PhoneLink(context: Context) : MessageClient.OnMessageReceivedListener {
         send(COLOR, byteArrayOf(r.toByte(), g.toByte(), b.toByte()))
     }
 
+    /** Mesmo lado de novo = desligar. */
+    fun setTurn(side: String) {
+        val off = _state.value.turn == side
+        val code: Byte = if (off) 0 else when (side) { "LEFT" -> 1; "RIGHT" -> 2; else -> 3 }
+        _state.value = _state.value.copy(turn = if (off) null else side)
+        send(TURN, byteArrayOf(code))
+    }
+
     fun setPreset(i: Int) {
         _state.value = _state.value.copy(safety = false)
         send(PRESET, byteArrayOf(i.toByte()))
@@ -111,7 +121,13 @@ class PhoneLink(context: Context) : MessageClient.OnMessageReceivedListener {
             critical = o.optBoolean("critical"),
             ledColor = if (c != null && c.length() == 3) Color(c.optInt(0), c.optInt(1), c.optInt(2)) else Color(0xFF333333),
             presets = presets ?: DEFAULT_PRESETS,
+            turn = if (o.isNull("turn")) null else o.optString("turn").takeIf { it.isNotEmpty() },
         )
+        val st = _state.value
+        if (st.safety != PhoneCommands.safety(context) || st.turn != PhoneCommands.turn(context)) {
+            PhoneCommands.saveState(context, st.safety, st.turn)
+            ApexTileService.refresh(context)
+        }
     }
 
     companion object {
@@ -120,5 +136,6 @@ class PhoneLink(context: Context) : MessageClient.OnMessageReceivedListener {
         const val COLOR = "/apexled/color"
         const val PRESET = "/apexled/preset"
         const val STATE = "/apexled/state"
+        const val TURN = "/apexled/turn"
     }
 }

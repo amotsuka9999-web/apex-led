@@ -39,9 +39,17 @@ object SettingsCodec {
         put("wheelName", s.wheelName ?: JSONObject.NULL)
         put("ledAddress", s.ledAddress ?: JSONObject.NULL)
         put("ledName", s.ledName ?: JSONObject.NULL)
-        put("extraLeds", JSONArray().also { a -> s.extraLeds.forEach { a.put(JSONObject().put("address", it.address).put("name", it.name ?: JSONObject.NULL)) } })
+        put("extraLeds", JSONArray().also { a -> s.extraLeds.forEach { a.put(JSONObject().put("address", it.address).put("name", it.name ?: JSONObject.NULL).put("side", it.side.name)) } })
         put("ledSimulated", s.ledSimulated)
         put("technicalMode", s.technicalMode)
+        put("ledSide", s.ledSide.name)
+        put("turnSignalSeconds", s.turnSignalSeconds)
+        put("tripLog", s.tripLog)
+        put("dayNight", JSONObject().put("enabled", s.dayNight.enabled).put("dayStartsHour", s.dayNight.dayStartsHour)
+            .put("nightStartsHour", s.dayNight.nightStartsHour).put("dayLevel", s.dayNight.dayLevel.toDouble()).put("nightLevel", s.dayNight.nightLevel.toDouble()))
+        put("voice", JSONObject().put("enabled", s.voice.enabled).put("signalLost", s.voice.signalLost)
+            .put("phoneBatteryBelow", s.voice.phoneBatteryBelow)
+            .put("pwmSteps", JSONArray(s.voice.pwmSteps.map { it.toDouble() })).put("batterySteps", JSONArray(s.voice.batterySteps)))
         put("theme", s.theme.name)
         put("disclaimerAccepted", s.disclaimerAccepted)
         put("led", led(s.led))
@@ -69,9 +77,30 @@ object SettingsCodec {
                 ledAddress = o.optStringOrNull("ledAddress"),
                 ledName = o.optStringOrNull("ledName"),
                 technicalMode = o.optBoolean("technicalMode", false),
+                ledSide = enumOr(o.optString("ledSide"), d.ledSide),
+                turnSignalSeconds = o.optInt("turnSignalSeconds", d.turnSignalSeconds).coerceIn(2, 120),
+                tripLog = o.optBoolean("tripLog", d.tripLog),
+                dayNight = o.optJSONObject("dayNight")?.let { n ->
+                    DayNightConfig(
+                        enabled = n.optBoolean("enabled", false),
+                        dayStartsHour = n.optInt("dayStartsHour", 7).coerceIn(0, 23),
+                        nightStartsHour = n.optInt("nightStartsHour", 18).coerceIn(0, 23),
+                        dayLevel = n.optDouble("dayLevel", 1.0).toFloat().coerceIn(0.05f, 1f),
+                        nightLevel = n.optDouble("nightLevel", 0.45).toFloat().coerceIn(0.05f, 1f),
+                    )
+                } ?: d.dayNight,
+                voice = o.optJSONObject("voice")?.let { v ->
+                    VoiceConfig(
+                        enabled = v.optBoolean("enabled", false),
+                        signalLost = v.optBoolean("signalLost", true),
+                        phoneBatteryBelow = v.optInt("phoneBatteryBelow", 20).coerceIn(0, 90),
+                        pwmSteps = v.optJSONArray("pwmSteps")?.let { a -> (0 until a.length()).map { a.optDouble(it).toFloat() } } ?: VoiceConfig().pwmSteps,
+                        batterySteps = v.optJSONArray("batterySteps")?.let { a -> (0 until a.length()).map { a.optInt(it) } } ?: VoiceConfig().batterySteps,
+                    )
+                } ?: d.voice,
                 extraLeds = o.optJSONArray("extraLeds")?.let { a ->
                     (0 until a.length()).mapNotNull { i ->
-                        a.optJSONObject(i)?.let { e -> e.optStringOrNull("address")?.let { SavedLed(it, e.optStringOrNull("name")) } }
+                        a.optJSONObject(i)?.let { e -> e.optStringOrNull("address")?.let { SavedLed(it, e.optStringOrNull("name"), enumOr(e.optString("side"), LedSide.BOTH)) } }
                     }.distinctBy { it.address }.take(FanoutLedController.MAX_DEVICES - 1)
                 } ?: emptyList(),
                 ledSimulated = o.optBoolean("ledSimulated", d.ledSimulated),

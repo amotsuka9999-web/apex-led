@@ -45,8 +45,9 @@ import java.util.Locale
 /**
  * App do relógio: 3 páginas (deslize para o lado).
  *  1. Modo seguro: liga/desliga e mostra velocidade, PWM e bateria, com a cor da fita em volta.
- *  2. Cores fixas: toque numa cor e a fita fica nela (pausa a segurança).
- *  3. Modos: 6 efeitos prontos (pausa a segurança).
+ *  2. Setas: esquerda, direita e pisca-alerta.
+ *  3. Cores fixas: toque numa cor e a fita fica nela (pausa a segurança).
+ *  4. Modos: 6 efeitos prontos (pausa a segurança).
  * Vibra quando a margem de segurança se esgota.
  */
 class WearActivity : ComponentActivity() {
@@ -78,7 +79,7 @@ private val Good = Color(0xFF22C55E)
 @Composable
 private fun WearApp(link: PhoneLink, vibrate: () -> Unit) {
     val state by link.state.collectAsState()
-    val pager = rememberPagerState(pageCount = { 3 })
+    val pager = rememberPagerState(pageCount = { 4 })
 
     LaunchedEffect(state.critical) { if (state.critical) vibrate() }
 
@@ -86,12 +87,13 @@ private fun WearApp(link: PhoneLink, vibrate: () -> Unit) {
         HorizontalPager(pager, Modifier.fillMaxSize()) { page ->
             when (page) {
                 0 -> SafetyPage(state, link)
-                1 -> ColorsPage(state, link)
+                1 -> TurnPage(state, link)
+                2 -> ColorsPage(state, link)
                 else -> PresetsPage(state, link)
             }
         }
         Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            repeat(3) { i ->
+            repeat(4) { i ->
                 Box(Modifier.size(6.dp).clip(CircleShape).background(if (i == pager.currentPage) Color.White else Color(0xFF555555)))
             }
         }
@@ -139,6 +141,29 @@ private fun Metric(label: String, value: String) {
         Text(value, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
         Text(label, color = Muted, fontSize = 10.sp)
     }
+}
+
+private val Amber = Color(0xFFFF8C00)
+
+@Composable
+private fun TurnPage(s: WatchState, link: PhoneLink) {
+    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)) {
+        Text("Setas", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            TurnButton("◀", s.turn == "LEFT", 64.dp) { link.setTurn("LEFT") }
+            TurnButton("▶", s.turn == "RIGHT", 64.dp) { link.setTurn("RIGHT") }
+        }
+        TurnButton("⚠ Alerta", s.turn == "HAZARD", 110.dp, 44.dp) { link.setTurn("HAZARD") }
+        Text("Toque de novo para desligar", color = Muted, fontSize = 10.sp)
+    }
+}
+
+@Composable
+private fun TurnButton(label: String, on: Boolean, w: androidx.compose.ui.unit.Dp, h: androidx.compose.ui.unit.Dp = 64.dp, onClick: () -> Unit) {
+    Box(
+        Modifier.width(w).height(h).clip(RoundedCornerShape(h / 2)).background(if (on) Amber else Card).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Text(label, color = Color.White, fontSize = if (h >= 60.dp) 26.sp else 15.sp, fontWeight = FontWeight.Bold) }
 }
 
 private val FIXED = listOf(

@@ -24,5 +24,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Bloco (tile): modo seguro e setas sem abrir o app. -->
+        <service
+            android:name=".ApexTileService"
+            android:exported="true"
+            android:label="Apex LED"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/ic_launcher_foreground" />
+        </service>
     </application>
 </manifest>

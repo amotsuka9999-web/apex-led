@@ -44,4 +44,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.coroutines.android)
     implementation(libs.play.services.wearable)
+    implementation(libs.wear.tiles)
+    implementation(libs.wear.protolayout)
+    implementation(libs.guava.android)
 }
