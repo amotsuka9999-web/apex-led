@@ -24,6 +24,22 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+        // Chave de publicação (Play Store): só existe no CI, vinda dos "secrets" do GitHub. Ver docs/play-store.md.
+        System.getenv("APEX_KEYSTORE_FILE")?.let { path ->
+            create("release") {
+                storeFile = file(path)
+                storePassword = System.getenv("APEX_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("APEX_KEY_ALIAS")
+                keyPassword = System.getenv("APEX_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
+        }
     }
 
     compileOptions {

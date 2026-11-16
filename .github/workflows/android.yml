@@ -11,6 +11,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    env:
+      HAS_RELEASE_KEY: ${{ secrets.APEX_KEYSTORE_B64 != '' }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -37,6 +39,26 @@ jobs:
           path: |
             apex-led.apk
             apex-led-relogio.apk
+
+      # Pacotes para a Play Store (.aab), só se os secrets da chave existirem. Ver docs/play-store.md.
+      - name: Pacotes da Play Store
+        if: github.event_name != 'pull_request' && env.HAS_RELEASE_KEY == 'true'
+        env:
+          APEX_KEYSTORE_B64: ${{ secrets.APEX_KEYSTORE_B64 }}
+          APEX_KEYSTORE_PASSWORD: ${{ secrets.APEX_KEYSTORE_PASSWORD }}
+          APEX_KEY_ALIAS: ${{ secrets.APEX_KEY_ALIAS }}
+          APEX_KEY_PASSWORD: ${{ secrets.APEX_KEY_PASSWORD }}
+        run: |
+          echo "$APEX_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/apex.jks"
+          export APEX_KEYSTORE_FILE="$RUNNER_TEMP/apex.jks"
+          ./gradlew :app:bundleRelease :wear:bundleRelease
+          cp app/build/outputs/bundle/release/app-release.aab apex-led-celular.aab
+          cp wear/build/outputs/bundle/release/wear-release.aab apex-led-relogio.aab
+      - uses: actions/upload-artifact@v6
+        if: github.event_name != 'pull_request' && hashFiles('apex-led-celular.aab') != ''
+        with:
+          name: apex-led-play-store
+          path: "*.aab"
 
       # Publica o APK num link fixo, que abre direto no celular (sem zip e sem login):
       # https://github.com/amotsuka9999-web/apex-led/releases/latest/download/apex-led.apk
