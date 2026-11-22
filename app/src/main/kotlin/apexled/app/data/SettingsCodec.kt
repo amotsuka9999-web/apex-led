@@ -234,7 +234,8 @@ object SettingsCodec {
             fault = FaultConfig(enumOr(o.optString("faultStyle"), d.fault.style), rgb(o.optJSONArray("faultColor"), d.fault.color), o.optLong("faultPeriodMs", d.fault.periodMs).coerceIn(300L, 5000L)),
             restPulse = RestPulseConfig(o.optBoolean("restPulse", false), f("restBelow", d.restPulse.belowKmh)),
             fixedColor = FixedColorConfig(
-                o.optBoolean("fixedColor", false), f("fixedBelow", d.fixedColor.belowKmh), rgb(o.optJSONArray("fixedRgb"), d.fixedColor.color),
+                enabled = o.optBoolean("fixedColor", false), belowKmh = f("fixedBelow", d.fixedColor.belowKmh),
+                color = rgb(o.optJSONArray("fixedRgb"), d.fixedColor.color),
                 color2 = o.optJSONArray("fixedRgb2")?.let { rgb(it, Rgb(170, 0, 255)) },
                 periodMs = o.optLong("fixedPeriodMs", d.fixedColor.periodMs).coerceIn(400, 20_000),
                 kind = enumOr(o.optString("restKind"), if (o.optJSONArray("fixedRgb2") != null) RestKind.TWO_COLORS else RestKind.COLOR),
