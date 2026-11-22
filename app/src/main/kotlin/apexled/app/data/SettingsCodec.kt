@@ -1,5 +1,6 @@
 package apexled.app.data
 
+import apexled.safety.RestKind
 import apexled.led.FanoutLedController
 import apexled.core.BatteryPoint
 import apexled.core.ColorOrder
@@ -204,6 +205,7 @@ object SettingsCodec {
         put("restPulse", c.restPulse.enabled); put("restBelow", c.restPulse.belowKmh.toDouble())
         put("fixedColor", c.fixedColor.enabled); put("fixedBelow", c.fixedColor.belowKmh.toDouble()); put("fixedRgb", rgb(c.fixedColor.color))
         put("fixedRgb2", c.fixedColor.color2?.let { rgb(it) } ?: JSONObject.NULL); put("fixedPeriodMs", c.fixedColor.periodMs)
+        put("restKind", c.fixedColor.kind.name); put("restEffectId", c.fixedColor.effectId); put("restEffectSpeed", c.fixedColor.effectSpeed)
         put("brake", c.brake.enabled); put("brakeRegenA", c.brake.regenCurrentA.toDouble()); put("brakeDecel", c.brake.decelKmhPerS.toDouble())
     }
 
@@ -233,7 +235,11 @@ object SettingsCodec {
             restPulse = RestPulseConfig(o.optBoolean("restPulse", false), f("restBelow", d.restPulse.belowKmh)),
             fixedColor = FixedColorConfig(
                 o.optBoolean("fixedColor", false), f("fixedBelow", d.fixedColor.belowKmh), rgb(o.optJSONArray("fixedRgb"), d.fixedColor.color),
-                o.optJSONArray("fixedRgb2")?.let { rgb(it, Rgb(170, 0, 255)) }, o.optLong("fixedPeriodMs", d.fixedColor.periodMs).coerceIn(400, 20_000),
+                color2 = o.optJSONArray("fixedRgb2")?.let { rgb(it, Rgb(170, 0, 255)) },
+                periodMs = o.optLong("fixedPeriodMs", d.fixedColor.periodMs).coerceIn(400, 20_000),
+                kind = enumOr(o.optString("restKind"), if (o.optJSONArray("fixedRgb2") != null) RestKind.TWO_COLORS else RestKind.COLOR),
+                effectId = o.optInt("restEffectId", 1),
+                effectSpeed = o.optInt("restEffectSpeed", 5).coerceIn(1, 10),
             ),
             brake = BrakeConfig(o.optBoolean("brake", false), f("brakeRegenA", d.brake.regenCurrentA), f("brakeDecel", d.brake.decelKmhPerS)),
         )

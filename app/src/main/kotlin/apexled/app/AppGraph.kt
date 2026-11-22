@@ -1,5 +1,6 @@
 package apexled.app
 
+import apexled.safety.RestKind
 import android.content.Context
 import apexled.app.data.AppSettings
 import apexled.app.data.SettingsRepository
@@ -405,8 +406,20 @@ class AppGraph(private val context: Context) {
                 if (overlay != null) { c.applyFrame(overlay); applied[c] = "overlay"; continue }
                 when (cfg.show) {
                     StripShow.SAFETY -> {
-                        val rest = set.safety.fixedColor.takeIf { set.safety.enabled && it.enabled }?.colorAt(now)
+                        val restCfg = set.safety.fixedColor.takeIf { set.safety.enabled && it.enabled }
+                        val restFx = restCfg?.takeIf { it.kind == RestKind.EFFECT }
+                        val resting = safetyFrame == null || _safety.value?.resting == true
+                        val rest = restCfg?.colorAt(now)
                         when {
+                            // stand-by com efeito da placa (parado, ou sem roda)
+                            restFx != null && resting -> {
+                                val key = "restfx:${restFx.effectId}:${restFx.effectSpeed}:$level"
+                                if (applied[c] != key) {
+                                    c.send(LedCommand.Power(true)); c.send(LedCommand.Effect(restFx.effectId))
+                                    c.send(LedCommand.EffectSpeed(restFx.effectSpeed)); c.send(LedCommand.Brightness((255 * level).toInt()))
+                                    applied[c] = key
+                                }
+                            }
                             safetyFrame != null -> { c.applyFrame(safetyFrame); applied[c] = "safety" }
                             // segurança ligada, mas sem roda: fica no repouso escolhido (não apaga, não fica verde)
                             rest != null -> {

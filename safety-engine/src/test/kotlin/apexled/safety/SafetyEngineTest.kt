@@ -30,11 +30,22 @@ class SafetyEngineTest {
 
     @Test fun restTransitionBetweenTwoColors() {
         val cyan = Rgb(0, 210, 255); val purple = Rgb(170, 0, 255)
-        val f = FixedColorConfig(enabled = true, color = cyan, color2 = purple, periodMs = 4000)
+        val f = FixedColorConfig(enabled = true, kind = RestKind.TWO_COLORS, color = cyan, color2 = purple, periodMs = 4000)
         assertEquals(cyan, f.colorAt(0))
         assertEquals(purple, f.colorAt(2000))
         val cfg = pwmOnly.copy(fixedColor = f)
         assertEquals(purple, SafetyEngine().step(tel(2000, pwm = 0.1f, speed = 1f), 2000, cfg).frame.color)
+    }
+
+    @Test fun standbyHasHysteresisAndYieldsToPwm() {
+        val cfg = pwmOnly.copy(fixedColor = FixedColorConfig(enabled = true, kind = RestKind.EFFECT, belowKmh = 5f))
+        val e = SafetyEngine()
+        assertTrue(e.step(tel(0, pwm = 0.1f, speed = 2f), 0, cfg).resting)
+        assertTrue(e.step(tel(100, pwm = 0.1f, speed = 6f), 100, cfg).resting)   // ainda dentro da histerese
+        assertFalse(e.step(tel(200, pwm = 0.1f, speed = 8f), 200, cfg).resting)  // saiu
+        assertFalse(e.step(tel(300, pwm = 0.1f, speed = 6f), 300, cfg).resting)  // só volta abaixo de 5
+        assertTrue(e.step(tel(400, pwm = 0.1f, speed = 4f), 400, cfg).resting)
+        assertFalse(SafetyEngine().step(tel(0, pwm = 0.85f, speed = 2f), 0, cfg).resting) // PWM alto: segurança manda
     }
 
     // ---- escala própria de velocidade (km/h) ---------------------------------------------

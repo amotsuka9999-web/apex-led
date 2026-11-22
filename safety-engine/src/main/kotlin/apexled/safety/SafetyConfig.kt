@@ -90,8 +90,15 @@ data class RestPulseConfig(
  * Cor de repouso: parado ou devagar (e enquanto a roda não conecta). Com [color2], a fita faz uma
  * transição suave entre as duas cores (ex.: ciano ↔ roxo) a cada [periodMs].
  */
+enum class RestKind(val label: String) { COLOR("Uma cor"), TWO_COLORS("Duas cores"), EFFECT("Efeito") }
+
 data class FixedColorConfig(
     val enabled: Boolean = false,
+    /** O que a fita faz em repouso (parado/devagar, ou sem roda conectada). */
+    val kind: RestKind = RestKind.COLOR,
+    /** Efeito da placa usado quando [kind] = EFFECT. */
+    val effectId: Int = 1,
+    val effectSpeed: Int = 5,
     val belowKmh: Float = 5f,
     val color: Rgb = Rgb(0, 210, 255),
     val color2: Rgb? = null,
@@ -99,7 +106,7 @@ data class FixedColorConfig(
 ) {
     /** Cor neste instante (transição em seno entre as duas, ida e volta). */
     fun colorAt(nowMs: Long): Rgb {
-        val b = color2 ?: return color
+        val b = color2?.takeIf { kind == RestKind.TWO_COLORS } ?: return color
         val p = periodMs.coerceAtLeast(400)
         val t = 0.5f - 0.5f * kotlin.math.cos((2.0 * kotlin.math.PI * (nowMs % p) / p).toFloat())
         return Rgb.lerp(color, b, t)

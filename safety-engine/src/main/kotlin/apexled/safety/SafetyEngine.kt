@@ -29,6 +29,8 @@ data class SafetyOutput(
     val limiting: LimitingFactor?,
     val flashing: Boolean,
     val braking: Boolean = false,
+    /** Em repouso (parado/devagar com folga): a fita mostra o "stand-by" escolhido. */
+    val resting: Boolean = false,
 )
 
 /**
@@ -58,7 +60,11 @@ class SafetyEngine {
     fun reset() {
         smoothed = 0f; lastNowMs = -1; hadSignal = false; stepIndex = 0; levelIndex = 0
         flashLatched = false; batteryFiltered = null; prevSampleTs = -1; brakeUntilMs = Long.MIN_VALUE
+        resting = true
     }
+
+    /** Repouso com histerese: entra abaixo de belowKmh, sai acima de belowKmh + 2 km/h (ou ao subir o uso). */
+    private var resting = true
 
     fun update(
         telemetry: Telemetry?,
@@ -103,9 +109,10 @@ class SafetyEngine {
         var brightness = config.brightness.coerceIn(0, 255)
 
         // Cor fixa em baixa velocidade: só quando há folga.
-        if (config.fixedColor.enabled && telemetry.speedKmh < config.fixedColor.belowKmh && usage < ATTENTION_AT) {
-            color = config.fixedColor.colorAt(nowMs)
-        }
+        val fc = config.fixedColor
+        resting = fc.enabled && usage < ATTENTION_AT &&
+            telemetry.speedKmh < fc.belowKmh + (if (resting) REST_HYSTERESIS_KMH else 0f)
+        if (resting) color = fc.colorAt(nowMs)
         // Pulso lento parado.
         if (config.restPulse.enabled && telemetry.speedKmh < config.restPulse.belowKmh && !flashOn) {
             val phase = 0.5f + 0.5f * sin((2.0 * PI * (nowMs % config.restPulse.periodMs) / config.restPulse.periodMs).toFloat())
@@ -133,6 +140,7 @@ class SafetyEngine {
             limiting = raw.limiting,
             flashing = flashing,
             braking = braking && !flashing,
+            resting = resting && !flashing && !braking,
         )
     }
 
@@ -271,6 +279,7 @@ class SafetyEngine {
     }
 
     private companion object {
+        const val REST_HYSTERESIS_KMH = 2f
         const val ATTENTION_AT = 0.60f
     }
 }

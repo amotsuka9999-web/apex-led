@@ -1,5 +1,7 @@
 package apexled.app.ui.screens
 
+import apexled.app.ui.components.EffectPickDialog
+import apexled.safety.RestKind
 import androidx.compose.material3.TextButton
 import apexled.app.ui.components.PresetRow
 import androidx.compose.foundation.background
@@ -148,6 +150,47 @@ fun SafetyScreen(graph: AppGraph) {
             if (cfg.mode == SafetyMode.COMBINED) SwitchRow("Considerar bateria baixa", cfg.batteryFactor, { v -> upd { it.copy(batteryFactor = v) } })
         }
 
+        // ---- stand-by --------------------------------------------------------------------
+        SectionCard("Stand-by (roda parada)", "Parado, devagar ou sem roda conectada, a fita fica no modo que você escolher. Ao rodar, entra a segurança.") {
+            val fc = cfg.fixedColor
+            fun updR(f: (apexled.safety.FixedColorConfig) -> apexled.safety.FixedColorConfig) = upd { it.copy(fixedColor = f(it.fixedColor)) }
+            SwitchRow("Usar stand-by", fc.enabled, { v -> updR { it.copy(enabled = v) } })
+            if (fc.enabled) {
+                ChipRow(RestKind.entries, fc.kind, { it.label }, { k ->
+                    updR { it.copy(kind = k, color2 = if (k == RestKind.TWO_COLORS) (it.color2 ?: Rgb(170, 0, 255)) else it.color2) }
+                })
+                var pick by remember { mutableStateOf(0) }
+                var pickFx by remember { mutableStateOf(false) }
+                when (fc.kind) {
+                    RestKind.COLOR -> {
+                        PresetRow(fc.color) { c -> updR { it.copy(color = c) } }
+                        TextButton({ pick = 1 }) { Text("Outra cor…") }
+                    }
+                    RestKind.TWO_COLORS -> {
+                        Text("Cor 1", style = MaterialTheme.typography.labelLarge)
+                        PresetRow(fc.color) { c -> updR { it.copy(color = c) } }
+                        TextButton({ pick = 1 }) { Text("Outra cor…") }
+                        Text("Cor 2", style = MaterialTheme.typography.labelLarge)
+                        PresetRow(fc.color2) { c -> updR { it.copy(color2 = c) } }
+                        TextButton({ pick = 2 }) { Text("Outra cor…") }
+                        LabeledSlider("Tempo da transição", fc.periodMs / 1000f, 1f..15f, { v -> updR { it.copy(periodMs = (v * 1000).toLong()) } },
+                            String.format(Locale.US, "%.0f s", fc.periodMs / 1000f))
+                    }
+                    RestKind.EFFECT -> {
+                        val fx = apexled.led.Sp621eEffects.all.firstOrNull { it.id == fc.effectId }
+                        BigButton(fx?.name ?: "Escolher efeito", { pickFx = true }, Modifier.fillMaxWidth(), primary = false)
+                        LabeledSlider("Velocidade do efeito", fc.effectSpeed.toFloat(), 1f..10f, { v -> updR { it.copy(effectSpeed = v.toInt()) } }, "${fc.effectSpeed}")
+                    }
+                }
+                LabeledSlider("Stand-by abaixo de", fc.belowKmh, 1f..20f, { v -> updR { it.copy(belowKmh = v) } },
+                    String.format(Locale.US, "%.0f km/h", fc.belowKmh), hint = "Volta ao stand-by ao reduzir; sai 2 km/h acima disso. Se o PWM chegar na atenção, a segurança manda.")
+                if (pick != 0) ColorPickDialog(if (pick == 1) fc.color else fc.color2 ?: fc.color, { c ->
+                    updR { if (pick == 1) it.copy(color = c) else it.copy(color2 = c) }; pick = 0
+                }, { pick = 0 })
+                if (pickFx) EffectPickDialog(fc.effectId, { id -> updR { it.copy(effectId = id) }; pickFx = false }, { pickFx = false })
+            }
+        }
+
         // ---- brilho dia/noite e voz ---------------------------------------------------------
         SectionCard("Brilho dia/noite", "Vale para a segurança e as setas (as cores manuais ficam como você escolheu).") {
             val dn = settings.dayNight
@@ -226,31 +269,6 @@ fun SafetyScreen(graph: AppGraph) {
 
         SectionCard("Extras") {
             SwitchRow("Pulso lento quando parado", cfg.restPulse.enabled, { v -> upd { it.copy(restPulse = it.restPulse.copy(enabled = v)) } })
-            SwitchRow("Cor de repouso (parado/devagar)", cfg.fixedColor.enabled, { v -> upd { it.copy(fixedColor = it.fixedColor.copy(enabled = v)) } },
-                hint = "Parado ou devagar, a fita fica nesta cor em vez do verde. Ao acelerar, volta à cor da segurança.")
-            if (cfg.fixedColor.enabled) {
-                val fc = cfg.fixedColor
-                val two = fc.color2 != null
-                ChipRow(listOf(false, true), two, { if (it) "Transição de 2 cores" else "Uma cor" },
-                    { v -> upd { it.copy(fixedColor = it.fixedColor.copy(color2 = if (v) (it.fixedColor.color2 ?: Rgb(170, 0, 255)) else null)) } })
-                if (two) Text("Cor 1", style = MaterialTheme.typography.labelLarge)
-                PresetRow(fc.color) { c -> upd { it.copy(fixedColor = it.fixedColor.copy(color = c)) } }
-                var pick by remember { mutableStateOf(0) }
-                TextButton({ pick = 1 }) { Text("Outra cor…") }
-                if (two) {
-                    Text("Cor 2", style = MaterialTheme.typography.labelLarge)
-                    PresetRow(fc.color2) { c -> upd { it.copy(fixedColor = it.fixedColor.copy(color2 = c)) } }
-                    TextButton({ pick = 2 }) { Text("Outra cor…") }
-                    LabeledSlider("Tempo da transição", fc.periodMs / 1000f, 1f..15f,
-                        { v -> upd { it.copy(fixedColor = it.fixedColor.copy(periodMs = (v * 1000).toLong())) } },
-                        String.format(Locale.US, "%.0f s", fc.periodMs / 1000f), hint = "Ida e volta entre as duas cores, suave.")
-                }
-                if (pick != 0) ColorPickDialog(if (pick == 1) fc.color else fc.color2 ?: fc.color, { c ->
-                    upd { it.copy(fixedColor = if (pick == 1) it.fixedColor.copy(color = c) else it.fixedColor.copy(color2 = c)) }; pick = 0
-                }, { pick = 0 })
-                LabeledSlider("Vale abaixo de", cfg.fixedColor.belowKmh, 1f..20f, { v -> upd { it.copy(fixedColor = it.fixedColor.copy(belowKmh = v)) } },
-                    String.format(Locale.US, "%.0f km/h", cfg.fixedColor.belowKmh))
-            }
             SwitchRow("Flash de freio (regeneração forte)", cfg.brake.enabled, { v -> upd { it.copy(brake = it.brake.copy(enabled = v)) } },
                 hint = "Detecta por desaceleração ou corrente negativa. Em Gotway/Veteran a corrente de bateria é estimada: prefira testar.")
         }

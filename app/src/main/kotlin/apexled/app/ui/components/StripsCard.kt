@@ -185,7 +185,7 @@ private fun StripEditor(cfg: StripConfig, update: ((StripConfig) -> StripConfig)
 private fun Label(t: String) = Text(t, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
 @Composable
-private fun EffectPickDialog(selected: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
+fun EffectPickDialog(selected: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Efeito da fita") },
